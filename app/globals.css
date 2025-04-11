@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Raleway:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --max-width: 1200px;
+  --font-mono: ui-monospace, Menlo, Monaco, "Cascadia Mono", "Segoe UI Mono",
+    "Roboto Mono", "Oxygen Mono", "Ubuntu Monospace", "Source Code Pro",
+    "Fira Mono", "Droid Sans Mono", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  height: 100%;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Classes personnalisées pour réutilisation */
+@layer components {
+  .wine-card {
+    @apply rounded-lg shadow-md hover:shadow-xl transition-all duration-300 bg-white overflow-hidden;
+  }
+  
+  .section-title {
+    @apply text-3xl font-serif font-semibold text-wine-burgundy mb-6;
+  }
+  
+  .btn-primary {
+    @apply bg-wine-red hover:bg-wine-burgundy text-white font-semibold py-2 px-4 rounded-md transition-colors duration-300;
+  }
+}

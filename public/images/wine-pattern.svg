@@ -1,0 +1,10 @@
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+  <!-- Verre de vin simplifié -->
+  <path d="M50 10 L60 40 C65 70 35 70 40 40 Z" stroke="currentColor" fill="none" stroke-width="1" opacity="0.2"/>
+  <!-- Grappe de raisin stylisée -->
+  <circle cx="30" cy="70" r="4" stroke="currentColor" fill="none" stroke-width="1" opacity="0.2"/>
+  <circle cx="25" cy="78" r="4" stroke="currentColor" fill="none" stroke-width="1" opacity="0.2"/>
+  <circle cx="35" cy="78" r="4" stroke="currentColor" fill="none" stroke-width="1" opacity="0.2"/>
+  <!-- Feuille de vigne -->
+  <path d="M70 65 Q80 55 75 70 Q85 75 75 80 Q65 85 70 75 Q60 70 70 65" stroke="currentColor" fill="none" stroke-width="1" opacity="0.2"/>
+</svg>
