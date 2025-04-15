@@ -22,6 +22,7 @@ import Image from 'next/image';
 import WineAgingCurve from '../../components/WineAgingCurve';
 import TastingRadarChart from '../../components/TastingRadarChart';
 import AppellationInfo from '../../components/AppellationInfo';
+import dynamic from 'next/dynamic';
 import { 
   RedWineBottle, 
   WhiteWineBottle, 
@@ -29,6 +30,12 @@ import {
   SparklingWineBottle, 
   FortifiedWineBottle 
 } from '../../components/bottles';
+
+// Import dynamique du composant BottleManagement
+const BottleManagementComponent = dynamic(() => import('../../components/BottleManagement'), {
+  ssr: false,
+  loading: () => <div className="flex justify-center my-4"><CircularProgress /></div>
+});
 
 // Définition des types pour le vin et les données associées
 interface Grape {
@@ -585,7 +592,7 @@ export default function WineDetail() {
               
               {/* Solution avec ratio d'aspect contrôlé */}
               <div style={{ height: "280px", width: "100%" }}>
-              <WineAgingCurve wine={wine as any} />
+                <WineAgingCurve wine={wine as any} />
               </div>
             </div>
               
@@ -617,6 +624,14 @@ export default function WineDetail() {
                 )}
               </div>
             )}
+          </div>
+        </div>
+        
+        {/* Section de gestion des bouteilles */}
+        <div className="mt-8">
+          <h2 className="text-xl font-serif font-medium mb-4">Gestion des bouteilles</h2>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <BottleManagementComponent wineId={wine.id} />
           </div>
         </div>
       </div>
