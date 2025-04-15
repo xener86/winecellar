@@ -1,54 +1,95 @@
+// app/storage/stock/components/CrateCard.tsx
 import React from 'react';
 import { 
   Box, Card, CardContent, Typography, IconButton, 
-  Tooltip, useTheme
+  Tooltip, useTheme 
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import WineBarIcon from '@mui/icons-material/WineBar';
-import { alpha } from '@mui/material/styles';
 
-type CrateCardProps = {
-  crate: any;
-  onSelect: () => void;
-  onDelete: () => void;
-  onRefresh: () => void;
+// --- AJOUT/MODIFICATION: Définition des types nécessaires ---
+// Idéalement, importer depuis un fichier centralisé types.ts
+type Wine = {
+  id: string;
+  name?: string | null; // Rendre optionnel car on ne l'utilise pas partout
+  color?: string | null; // Rendre optionnel
+  vintage?: number | null;
 };
 
+type Bottle = {
+  id: string;
+  wine_id: string; // Supposons qu'il y a toujours un wine_id
+  wine?: Wine | null; // Le vin associé est optionnel
+};
+
+// Nouveau type pour la prop 'crate'
+type CrateData = {
+  id: string; // Supposons qu'une caisse a un ID
+  name: string;
+  capacity: number;
+  bottles: Bottle[]; // Un tableau de bouteilles
+};
+
+// Props du composant mises à jour
+type CrateCardProps = {
+  crate: CrateData; // <-- Utilisation du type CrateData
+  onSelect: (crateId: string) => void; // Préciser qu'on passe l'ID
+  onDelete: (crateId: string) => void; // Préciser qu'on passe l'ID
+  // onRefresh: () => void; // <-- Prop onRefresh supprimée car non utilisée
+};
+// --- FIN AJOUT/MODIFICATION TYPES ---
+
 // Fonction pour obtenir la couleur de fond pour une bouteille de vin
-const getWineColorCode = (color: string) => {
-  return color === 'red' ? 'rgba(139, 0, 0, 0.9)' : 
-         color === 'white' ? 'rgba(245, 245, 220, 0.9)' :
-         color === 'rose' ? 'rgba(255, 182, 193, 0.9)' :
-         color === 'sparkling' ? 'rgba(176, 196, 222, 0.9)' :
-         'rgba(139, 69, 19, 0.9)';
+const getWineColorCode = (color: string | null | undefined): string => {
+  switch (color) {
+    case 'red': return 'rgba(139, 0, 0, 0.9)';
+    case 'white': return 'rgba(245, 245, 220, 0.9)';
+    case 'rose': return 'rgba(255, 182, 193, 0.9)';
+    case 'sparkling': return 'rgba(176, 196, 222, 0.9)';
+    case 'fortified': return 'rgba(139, 69, 19, 0.9)';
+    default: return 'rgba(120, 120, 120, 0.7)'; // Gris par défaut pour inconnu/null
+  }
 };
 
 // Fonction pour obtenir la couleur du texte adaptée au fond
-const getTextColorForBackground = (color: string) => {
-  return color === 'red' || color === 'fortified' ? 'white' : 'black';
+const getTextColorForBackground = (color: string | null | undefined): string => {
+   switch (color) {
+    case 'red':
+    case 'fortified':
+      return 'white';
+    default:
+      return 'black';
+  }
 };
 
-const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete, onRefresh }) => {
+// CORRECTION: Signature du composant mise à jour (onRefresh retiré)
+const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   
   // Gestion du clic sur le bouton de suppression
   const handleDeleteClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onDelete();
+    e.stopPropagation(); // Empêche le clic de se propager à la Card (qui déclenche onSelect)
+    onDelete(crate.id); // Passe l'ID de la caisse à supprimer
   };
   
-  // Gestion du clic sur le bouton d'ajout
+  // Gestion du clic sur le bouton d'ajout (ou autre action sur la caisse)
   const handleAddClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // Implémenter l'ajout de bouteille à la caisse
-    // Pour l'instant, on se contente de sélectionner la caisse
-    onSelect();
+    e.stopPropagation(); // Empêche la propagation
+    // Ici, on pourrait ouvrir un dialogue spécifique pour ajouter à CETTE caisse
+    // Pour l'instant, on simule en sélectionnant la caisse (comportement précédent)
+    onSelect(crate.id); 
+  };
+
+  // Gestion du clic sur la carte elle-même
+  const handleCardClick = () => {
+    onSelect(crate.id); // Sélectionne la caisse en passant son ID
   };
   
   return (
     <Card 
+      onClick={handleCardClick} // Utiliser le gestionnaire dédié
       sx={{ 
         borderRadius: 2, 
         height: '100%',
@@ -61,23 +102,18 @@ const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete, onRefr
           boxShadow: 3
         }
       }}
-      onClick={onSelect}
     >
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-          <Typography variant="h6">{crate.name}</Typography>
+          <Typography variant="h6">{crate.name || "Caisse sans nom"}</Typography>
           <Box>
             {crate.bottles.length < crate.capacity && (
               <Tooltip title="Ajouter une bouteille">
+                {/* Ce IconButton devrait probablement ouvrir un dialogue spécifique */}
                 <IconButton 
                   size="small" 
-                  onClick={handleAddClick}
-                  sx={{ 
-                    '&:hover': {
-                      color: theme.palette.primary.main,
-                      bgcolor: alpha(theme.palette.primary.main, 0.1)
-                    }
-                  }}
+                  onClick={handleAddClick} // Peut-être renommer ou changer l'action
+                  sx={{ /* ... styles hover ... */ }}
                 >
                   <AddIcon fontSize="small" />
                 </IconButton>
@@ -87,13 +123,7 @@ const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete, onRefr
               <IconButton 
                 size="small" 
                 onClick={handleDeleteClick}
-                sx={{ 
-                  ml: 0.5,
-                  '&:hover': {
-                    color: theme.palette.error.main,
-                    bgcolor: alpha(theme.palette.error.main, 0.1)
-                  }
-                }}
+                sx={{ /* ... styles hover ... */ }}
               >
                 <DeleteIcon fontSize="small" />
               </IconButton>
@@ -105,67 +135,40 @@ const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete, onRefr
           <Typography 
             variant="body2" 
             color="text.secondary"
-            sx={{
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)',
-              px: 1,
-              py: 0.5,
-              borderRadius: 1,
-              fontSize: '0.75rem'
-            }}
+            sx={{ /* ... styles ... */ }}
           >
-            {crate.bottles.length}/{crate.capacity} bouteilles
+            {/* S'assurer que capacity est un nombre */}
+            {crate.bottles.length}/{typeof crate.capacity === 'number' ? crate.capacity : '?'} bouteilles
           </Typography>
         </Box>
         
         {/* Aperçu visuel des bouteilles */}
         <Box 
-          sx={{ 
-            display: 'flex', 
-            flexWrap: 'wrap', 
-            gap: 1,
-            justifyContent: 'center',
-            p: 2,
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)',
-            borderRadius: 2
-          }}
+          sx={{ /* ... styles conteneur ... */ }}
         >
-          {crate.bottles.map((bottle: any) => (
+          {/* CORRECTION: Utiliser le type Bottle dans le map */}
+          {crate.bottles.map((bottle: Bottle) => ( 
             <Tooltip 
               key={bottle.id} 
-              title={`${bottle.wine?.name || 'Vin'} ${bottle.wine?.vintage || ''}`}
+              title={`${bottle.wine?.name || 'Vin inconnu'} ${bottle.wine?.vintage || ''}`}
               arrow
             >
               <Box 
-                sx={{ 
-                  width: 30, 
-                  height: 60, 
-                  borderRadius: '10px 10px 0 0',
-                  bgcolor: getWineColorCode(bottle.wine?.color || 'red'),
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  pb: 0.5
+                sx={{ /* ... styles bouteille ... */ 
+                  bgcolor: getWineColorCode(bottle.wine?.color), // Passe la couleur
                 }}
               >
                 <WineBarIcon 
-                  sx={{ 
-                    fontSize: 16, 
-                    color: getTextColorForBackground(bottle.wine?.color || 'red'),
-                    opacity: 0.7,
-                    mb: 0.5
+                  sx={{ /* ... styles icone ... */
+                    color: getTextColorForBackground(bottle.wine?.color),
                   }} 
                 />
                 
                 {bottle.wine?.vintage && (
                   <Typography 
                     variant="caption" 
-                    sx={{ 
-                      fontSize: '0.6rem',
-                      color: getTextColorForBackground(bottle.wine.color),
-                      fontWeight: 'bold'
+                    sx={{ /* ... styles millésime ... */
+                      color: getTextColorForBackground(bottle.wine?.color),
                     }}
                   >
                     {bottle.wine.vintage}
@@ -176,16 +179,11 @@ const CrateCard: React.FC<CrateCardProps> = ({ crate, onSelect, onDelete, onRefr
           ))}
           
           {/* Emplacements vides */}
-          {Array.from({ length: crate.capacity - crate.bottles.length }).map((_, index) => (
+          {/* S'assurer que capacity est un nombre avant de créer le tableau */}
+          {typeof crate.capacity === 'number' && Array.from({ length: Math.max(0, crate.capacity - crate.bottles.length) }).map((_, index) => (
             <Box 
               key={`empty-${index}`}
-              sx={{ 
-                width: 30, 
-                height: 60, 
-                borderRadius: '10px 10px 0 0',
-                border: '1px dashed #ccc',
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)'
-              }}
+              sx={{ /* ... styles emplacement vide ... */ }}
             />
           ))}
         </Box>

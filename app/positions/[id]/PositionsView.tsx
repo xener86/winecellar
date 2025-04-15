@@ -233,7 +233,7 @@ export default function PositionsView({ params }: PositionsViewProps) {
           {(location?.row_count && location?.column_count) ? (
             <Grid container spacing={1} sx={{ mt: 2 }}>
               {Array.from({ length: location.row_count ?? 0 }, (_, rowIndex) => (
-                <Grid item component="div" xs={12} key={rowIndex}>
+                <Grid component="div" key={rowIndex} sx={{ width: { xs: '100%' } }}>
                   <Box display="flex" justifyContent="center">
                     {Array.from({ length: location.column_count ?? 0 }, (_, colIndex) => {
                       const position = positions.find(

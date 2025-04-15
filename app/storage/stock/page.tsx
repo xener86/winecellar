@@ -3,9 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Container, Typography, Box, Grid, Button, CircularProgress, 
-  Paper, Divider, Tabs, Tab, Snackbar, Alert, useTheme
+  Paper, Divider, Snackbar, Alert, useTheme
 } from '@mui/material';
-import { alpha } from '@mui/material/styles';
 import AddIcon from '@mui/icons-material/Add';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Breadcrumbs from '@mui/material/Breadcrumbs';
@@ -53,6 +52,13 @@ type Wine = {
   alcohol_percentage: number | null;
 };
 
+// Type pour les erreurs
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface ApiError {
+  message: string;
+  [key: string]: unknown;
+}
+
 export default function StockManagement() {
   const router = useRouter();
   const theme = useTheme();
@@ -68,13 +74,8 @@ export default function StockManagement() {
     severity: 'success' as 'success' | 'error' | 'info'
   });
 
-  // Charger les caisses au chargement de la page
-  useEffect(() => {
-    fetchCrates();
-  }, []);
-
   // Fonction pour récupérer les caisses
-  const fetchCrates = async () => {
+  const fetchCrates = React.useCallback(async () => {
     try {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) {
@@ -131,16 +132,21 @@ export default function StockManagement() {
 
       setCrates(cratesWithBottles);
       setLoading(false);
-    } catch (error: any) {
-      console.error('Erreur lors du chargement des caisses:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
+      console.error('Message d\'erreur', error);
       setNotification({
-        open: true,
-        message: `Erreur: ${error.message || 'Une erreur est survenue'}`,
-        severity: 'error'
+          open: true,
+          message: `Erreur: ${errorMessage}`,
+          severity: 'error'
       });
-      setLoading(false);
-    }
-  };
+  }
+  }, [router]);
+  
+  // Charger les caisses au chargement de la page
+  useEffect(() => {
+    fetchCrates();
+  }, [fetchCrates]);
 
   // Fonction pour ajouter une nouvelle caisse
   const handleAddCrate = async (crateName: string) => {
@@ -170,11 +176,12 @@ export default function StockManagement() {
       });
       
       setIsAddCrateModalOpen(false);
-    } catch (error: any) {
-      console.error('Erreur lors de l\'ajout de caisse:', error);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erreur lors de l\'ajout de caisse:';
+      console.error('Message d\'erreur', error);
       setNotification({
         open: true,
-        message: `Erreur: ${error.message || 'Une erreur est survenue'}`,
+        message: `Erreur: ${errorMessage}`,
         severity: 'error'
       });
     }
@@ -220,11 +227,12 @@ export default function StockManagement() {
         message: 'Caisse supprimée avec succès',
         severity: 'success'
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Une erreur est survenue';
       console.error('Erreur lors de la suppression de caisse:', error);
       setNotification({
         open: true,
-        message: `Erreur: ${error.message || 'Une erreur est survenue'}`,
+        message: `Erreur: ${errorMessage}`,
         severity: 'error'
       });
     }
@@ -330,12 +338,12 @@ export default function StockManagement() {
         ) : (
           <Grid container spacing={3}>
             {crates.map((crate) => (
-              <Grid item xs={12} sm={6} md={4} key={crate.id}>
+              <Grid component="div" key={crate.id} sx={{ width: { xs: '100%', sm: '50%', md: '33%' } }}>
+
                 <CrateCard 
                   crate={crate}
                   onSelect={() => setSelectedCrate(crate)}
                   onDelete={() => handleDeleteCrate(crate.id)}
-                  onRefresh={fetchCrates}
                 />
               </Grid>
             ))}

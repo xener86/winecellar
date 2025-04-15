@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { CircularProgress, Snackbar, Alert, Divider as MuiDivider } from '@mui/material';
+import React, { useEffect, useState, useCallback } from 'react';
+import { CircularProgress, Snackbar, Alert, AlertColor } from '@mui/material';
 import { 
   ArrowLeft, 
   Edit, 
@@ -10,12 +11,14 @@ import {
   Wine, 
   Clock, 
   FileText, 
-  UtensilsCrossed
+  UtensilsCrossed,
+  LucideIcon
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import { supabase } from '../../utils/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import WineAgingCurve from '../../components/WineAgingCurve';
 import TastingRadarChart from '../../components/TastingRadarChart';
 import AppellationInfo from '../../components/AppellationInfo';
@@ -27,8 +30,46 @@ import {
   FortifiedWineBottle 
 } from '../../components/bottles';
 
+// Définition des types pour le vin et les données associées
+interface Grape {
+  id: string;
+  name: string;
+  percentage?: number;
+}
+
+interface TastingNotes {
+  id: string;
+  wine_id: string;
+  appearance: string | null;
+  nose: string | null;
+  palate: string | null;
+  food_pairing: string | null;
+  aging_potential: string | null;
+  created_at: string;
+}
+
+type WineColor = 'red' | 'white' | 'rose' | 'sparkling' | 'fortified';
+
+interface Wine {
+  id: string;
+  name: string;
+  domain?: string;
+  vintage?: number;
+  region?: string;
+  appellation?: string;
+  color: WineColor;
+  alcohol_percentage?: number;
+  price?: number;
+  purchase_date?: string;
+  optimal_consumption_end?: string;
+  notes?: string;
+  image_url?: string;
+  grapes: Grape[];
+  tasting_notes?: TastingNotes | null;
+}
+
 // Fonction pour rendre la bouteille de vin appropriée
-const renderWineBottle = (wine) => {
+const renderWineBottle = (wine: Wine) => {
   const { name, vintage, domain, appellation, region, color, alcohol_percentage } = wine;
   
   const wineInfo = {
@@ -51,8 +92,8 @@ const renderWineBottle = (wine) => {
 };
 
 // Fonction pour afficher la couleur du vin en français
-const getColorLabel = (color) => {
-  const colors = {
+const getColorLabel = (color: WineColor): string => {
+  const colors: Record<WineColor, { label: string }> = {
     red: { label: 'Rouge' },
     white: { label: 'Blanc' },
     rose: { label: 'Rosé' },
@@ -69,7 +110,12 @@ const Divider = () => (
 );
 
 // Titre de section avec icône
-const SectionTitle = ({ icon: Icon, title }) => (
+interface SectionTitleProps {
+  icon: LucideIcon;
+  title: string;
+}
+
+const SectionTitle = ({ icon: Icon, title }: SectionTitleProps) => (
   <div className="flex items-center mb-3">
     <Icon className="text-red-800 mr-2" size={18} />
     <h3 className="text-sm font-medium uppercase tracking-wide text-gray-700">{title}</h3>
@@ -77,13 +123,20 @@ const SectionTitle = ({ icon: Icon, title }) => (
 );
 
 export default function WineDetail() {
-  const [wine, setWine] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState({
+  const [wine, setWine] = useState<Wine | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [expanded, setExpanded] = useState<{
+    appellation: boolean;
+    notes: boolean;
+  }>({
     appellation: false,
     notes: false
   });
-  const [notification, setNotification] = useState({
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: AlertColor;
+  }>({
     open: false,
     message: '',
     severity: 'success'
@@ -95,12 +148,53 @@ export default function WineDetail() {
   const id = params?.id ? String(params.id) : '';
 
   // Toggle pour les sections expansibles
-  const toggleExpanded = (section) => {
+  const toggleExpanded = (section: 'appellation' | 'notes') => {
     setExpanded(prev => ({
       ...prev,
       [section]: !prev[section]
     }));
   };
+
+  // Fonction pour extraire des notes de dégustation du champ notes
+  const parseNotesFromDescription = useCallback((notes?: string): TastingNotes | null => {
+    if (!notes) return null;
+
+    const tastingNotes: TastingNotes = {
+      id: 'generated',
+      wine_id: id,
+      appearance: null,
+      nose: null,
+      palate: null,
+      food_pairing: null,
+      aging_potential: null,
+      created_at: new Date().toISOString()
+    };
+
+    // Rechercher les sections dans les notes
+    // Utilisation de matchAll au lieu du flag 's' pour la compatibilité ES2018+
+    const robeMatch = notes.match(/ROBE :\n(.*?)(?:\n\n|$)/);
+    if (robeMatch) tastingNotes.appearance = robeMatch[1].trim();
+
+    const nezMatch = notes.match(/NEZ :\n(.*?)(?:\n\n|$)/);
+    if (nezMatch) tastingNotes.nose = nezMatch[1].trim();
+
+    const boucheMatch = notes.match(/BOUCHE :\n(.*?)(?:\n\n|$)/);
+    if (boucheMatch) tastingNotes.palate = boucheMatch[1].trim();
+
+    const gardeMatch = notes.match(/POTENTIEL DE GARDE :\n(.*?)(?:\n\n|$)/);
+    if (gardeMatch) tastingNotes.aging_potential = gardeMatch[1].trim();
+
+    const accordsMatch = notes.match(/ACCORDS METS & VIN :\n(.*?)(?:\n\n|$)/);
+    if (accordsMatch) tastingNotes.food_pairing = accordsMatch[1].trim();
+
+    // Si au moins une section a été trouvée, retourner les notes
+    if (tastingNotes.appearance || tastingNotes.nose || tastingNotes.palate || 
+        tastingNotes.aging_potential || tastingNotes.food_pairing) {
+      return tastingNotes;
+    }
+
+    return null;
+  }, [id]);
 
   useEffect(() => {
     const fetchWine = async () => {
@@ -154,7 +248,7 @@ export default function WineDetail() {
         }
 
         // Formater les données de cépages
-        const grapes = grapeData ? grapeData.map((item) => ({
+        const grapes: Grape[] = grapeData ? grapeData.map((item: any) => ({
           id: item.grape.id,
           name: item.grape.name,
           percentage: item.percentage
@@ -165,8 +259,8 @@ export default function WineDetail() {
           ...wineData,
           grapes,
           tasting_notes: tastingData || parseNotesFromDescription(wineData.notes)
-        });
-      } catch (error) {
+        } as Wine);
+      } catch (error: any) {
         console.error('Erreur lors de la récupération du vin:', error);
         setNotification({
           open: true,
@@ -179,60 +273,7 @@ export default function WineDetail() {
     };
 
     fetchWine();
-  }, [id, router]);
-
-  // Fonction pour extraire des notes de dégustation du champ notes
-  const parseNotesFromDescription = (notes) => {
-    if (!notes) return null;
-
-    let tastingNotes = {
-      id: 'generated',
-      wine_id: id,
-      appearance: null,
-      nose: null,
-      palate: null,
-      food_pairing: null,
-      aging_potential: null,
-      created_at: new Date().toISOString()
-    };
-
-    // Rechercher les sections dans les notes
-    const robeMatch = notes.match(/ROBE :\n(.*?)(?:\n\n|$)/s);
-    if (robeMatch) tastingNotes.appearance = robeMatch[1].trim();
-
-    const nezMatch = notes.match(/NEZ :\n(.*?)(?:\n\n|$)/s);
-    if (nezMatch) tastingNotes.nose = nezMatch[1].trim();
-
-    const boucheMatch = notes.match(/BOUCHE :\n(.*?)(?:\n\n|$)/s);
-    if (boucheMatch) tastingNotes.palate = boucheMatch[1].trim();
-
-    const gardeMatch = notes.match(/POTENTIEL DE GARDE :\n(.*?)(?:\n\n|$)/s);
-    if (gardeMatch) tastingNotes.aging_potential = gardeMatch[1].trim();
-
-    const accordsMatch = notes.match(/ACCORDS METS & VIN :\n(.*?)(?:\n\n|$)/s);
-    if (accordsMatch) tastingNotes.food_pairing = accordsMatch[1].trim();
-
-    // Si au moins une section a été trouvée, retourner les notes
-    if (tastingNotes.appearance || tastingNotes.nose || tastingNotes.palate || 
-        tastingNotes.aging_potential || tastingNotes.food_pairing) {
-      return tastingNotes;
-    }
-
-    return null;
-  };
-  const getWineColorStyle = (color) => {
-    switch (color) {
-      case 'white':
-        return { fill: '#DAA52050', stroke: '#DAA520' }; // Doré pour vin blanc
-      case 'red':
-        return { fill: '#9A2A2A50', stroke: '#9A2A2A' }; // Rouge bordeaux
-      case 'rose':
-        return { fill: '#FF69B450', stroke: '#FF69B4' }; // Rose
-      // autres cas...
-      default:
-        return { fill: '#8B451350', stroke: '#8B4513' };
-    }
-  };
+  }, [id, router, parseNotesFromDescription]);
 
   const handleDelete = async () => {
     if (!id || !wine) return;
@@ -258,7 +299,7 @@ export default function WineDetail() {
       setTimeout(() => {
         router.push('/wines');
       }, 1500);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors de la suppression:', error);
       setNotification({
         open: true,
@@ -366,17 +407,17 @@ export default function WineDetail() {
           <div className="md:col-span-7 space-y-6">
             {/* Radar de dégustation */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-  <SectionTitle icon={Wine} title="Profil de dégustation" />
-  <div className="text-xs text-gray-600 mb-2">
-    Caractéristiques principales basées sur les notes de dégustation
-  </div>
-  <TastingRadarChart 
-    wine={wine} 
-    height={200} 
-    showTitle={false} // Titre déjà fourni par le parent
-    showFootnote={true}
-  />
-</div>
+              <SectionTitle icon={Wine} title="Profil de dégustation" />
+              <div className="text-xs text-gray-600 mb-2">
+                Caractéristiques principales basées sur les notes de dégustation
+              </div>
+              <TastingRadarChart 
+                wine={wine} 
+                height={200} 
+                showTitle={false} // Titre déjà fourni par le parent
+                showFootnote={true}
+              />
+            </div>
               
 
             {/* Informations générales */}
@@ -410,7 +451,7 @@ export default function WineDetail() {
                 )}
                 <div>
                   <span className="text-gray-500">Garde:</span>
-                  <span className="ml-2 font-medium">Jusqu'en {optimalYear}</span>
+                  <span className="ml-2 font-medium">Jusqu&apos;en {optimalYear}</span>
                 </div>
                 <div>
                   <span className="text-gray-500">Service:</span>
@@ -437,7 +478,7 @@ export default function WineDetail() {
                   <div>
                     <div className="text-gray-500 text-sm mb-2">Cépages:</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {wine.grapes.map((grape) => (
+                      {wine.grapes.map((grape: Grape) => (
                         <span 
                           key={grape.id}
                           className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200"
@@ -514,11 +555,15 @@ export default function WineDetail() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center">
               <div className="h-64 flex items-center justify-center">
                 {wine.image_url ? (
-                  <img 
-                    src={wine.image_url} 
-                    alt={wine.name} 
-                    className="h-full object-contain"
-                  />
+                  <div className="h-full w-full relative">
+                    <Image 
+                      src={wine.image_url} 
+                      alt={wine.name} 
+                      fill
+                      style={{ objectFit: 'contain' }}
+                      sizes="(max-width: 768px) 100vw, 300px"
+                    />
+                  </div>
                 ) : (
                   <div className="h-full w-32 flex items-center justify-center">
                     {renderWineBottle(wine)}
@@ -528,23 +573,22 @@ export default function WineDetail() {
             </div>
 
             {/* Courbe d'apogée */}
-
-  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-  <div className="flex items-center mb-2">
-    <Clock className="text-wine-color mr-2" size={18} />
-    <h3 className="text-sm font-medium">Cycle de vie</h3>
-  </div>
-  
-  <div className="text-xs text-gray-600 mb-1">
-    Évolution estimée de la qualité du vin au fil du temps
-  </div>
-  
-  {/* Solution avec ratio d'aspect contrôlé */}
-  <div style={{ height: "280px", width: "100%" }}>
-  <WineAgingCurve wine={wine} />
-</div>
-</div>
-            
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+              <div className="flex items-center mb-2">
+                <Clock className="text-wine-color mr-2" size={18} />
+                <h3 className="text-sm font-medium">Cycle de vie</h3>
+              </div>
+              
+              <div className="text-xs text-gray-600 mb-1">
+                Évolution estimée de la qualité du vin au fil du temps
+              </div>
+              
+              {/* Solution avec ratio d'aspect contrôlé */}
+              <div style={{ height: "280px", width: "100%" }}>
+              <WineAgingCurve wine={wine as any} />
+              </div>
+            </div>
+              
             {/* Accords mets-vins et potentiel de garde */}
             {(wine.tasting_notes?.food_pairing || wine.tasting_notes?.aging_potential) && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">

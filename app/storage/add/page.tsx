@@ -199,7 +199,8 @@ export default function AddStorageLocation() {
           
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }} noValidate>
             <Grid container spacing={3}>
-              <Grid item xs={12} sm={6}>
+            <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+
                 <TextField
                   required
                   fullWidth
@@ -211,7 +212,8 @@ export default function AddStorageLocation() {
                   autoComplete="off"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+
                 <FormControl fullWidth required>
                   <InputLabel id="type-label">Type</InputLabel> 
                   <Select
@@ -232,7 +234,8 @@ export default function AddStorageLocation() {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+
                 <TextField
                   fullWidth
                   id="row_count"
@@ -246,7 +249,8 @@ export default function AddStorageLocation() {
                   helperText="Laissez vide si non applicable (ex: Caisse)"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+
                 <TextField
                   fullWidth
                   id="column_count"
@@ -260,7 +264,8 @@ export default function AddStorageLocation() {
                 />
               </Grid>
 
-              <Grid item xs={12} sx={{ mt: 2 }}>
+              <Grid component="div" sx={{ width: { xs: '100%', md: '20%' } }}>
+
                 <Button
                   type="submit"
                   variant="contained"

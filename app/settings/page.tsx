@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Container, Typography, Box, TextField, Button, Paper, Alert, Snackbar
 } from '@mui/material';
+import { AlertColor } from '@mui/material/Alert';
 import Navbar from '../components/Navbar';
 import { supabase } from '../utils/supabase';
 
@@ -12,7 +13,11 @@ export default function SettingsPage() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [mistralKey, setMistralKey] = useState('');
   const [loading, setLoading] = useState(false);
-  const [notification, setNotification] = useState({
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+    severity: AlertColor;
+  }>({
     open: false,
     message: '',
     severity: 'success'

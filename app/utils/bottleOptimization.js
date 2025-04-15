@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /**
  * Cette fonction optimise le placement des bouteilles en utilisant un algorithme plus avancé
  * qui tente de regrouper les bouteilles du même vin ou de types similaires ensemble

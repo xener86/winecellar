@@ -16,8 +16,9 @@ import WineAIService from '../services/WineAIService';
 // Créer une instance du service
 const wineAIService = new WineAIService();
 
-// Define types for our component
+// Définition des types pour le composant
 interface WineData {
+  name: string; 
   vintage: number;
   color?: 'red' | 'white' | 'rose' | 'sparkling' | 'fortified';
   region?: string;
@@ -57,14 +58,15 @@ interface WineAgingCurveProps {
 }
 
 /**
- * Composant amélioré pour visualiser la courbe de vieillissement d'un vin
- * @param {Object} props - Propriétés du composant
- * @param {Object} props.wine - Données du vin
+ * Composant amélioré pour visualiser la courbe de vieillissement d'un vin.
+ * 
+ * @param {WineAgingCurveProps} props - Propriétés du composant
+ * @param {WineData} props.wine - Données du vin
  * @param {number} props.height - Hauteur du graphique (défaut: 220px)
  * @param {boolean} props.showDetails - Afficher les détails additionnels (défaut: true)
  * @param {boolean} props.refreshable - Permettre le rafraîchissement des données (défaut: false)
- * @param {Object} props.apiConfig - Configuration pour les appels API (optionnel)
- * @param {Function} props.onDataUpdate - Callback lorsque les données sont mises à jour (optionnel)
+ * @param {Record<string, unknown> | null} props.apiConfig - Configuration pour les appels API (optionnel)
+ * @param {(data: AgingDetails) => void | null} props.onDataUpdate - Callback lorsque les données sont mises à jour (optionnel)
  */
 const WineAgingCurve: React.FC<WineAgingCurveProps> = ({ 
   wine, 
@@ -89,7 +91,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
   }, [wine]);
 
   /**
-   * Charge les données de vieillissement du vin
+   * Charge les données de vieillissement du vin.
    * @param {boolean} forceRefresh - Forcer le rafraîchissement des données
    */
   const loadAgingData = async (forceRefresh = false) => {
@@ -112,8 +114,8 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
         ...(apiConfig || {})
       };
       
-      // Récupérer les données de vieillissement via le service
-      const details = await wineAIService.getAgingData(wine, options);
+      // Correction : S'assurer que la propriété "color" est toujours définie via une valeur par défaut
+      const details = await wineAIService.getAgingData({ ...wine, color: wine.color ?? "red" }, options);
       
       if (!details) {
         throw new Error("Données de vieillissement non disponibles");
@@ -125,7 +127,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
       // Mettre à jour les états
       setEstimatedPeakAge(calculatePeakAge(details as AgingDetails));
       
-      // On doit typer l'objet details pour accéder à ses propriétés
+      // Typage pour accéder aux propriétés spécifiques
       const typedDetails = details as AgingDetails;
       setPeakYear(typedDetails.peak_start_year + Math.floor((typedDetails.peak_end_year - typedDetails.peak_start_year) / 2));
       
@@ -137,6 +139,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
       if (wine.vintage_score) {
         setVintageScore(wine.vintage_score);
       } else if (wine.region) {
+        // Correction : Assurez-vous que la méthode getVintageScore est publique dans WineAIService
         const scoreData = await wineAIService.getVintageScore(wine.region, wine.vintage);
         if (scoreData) {
           setVintageScore(scoreData);
@@ -157,7 +160,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
   };
 
   /**
-   * Calcule l'âge d'apogée à partir des données de vieillissement
+   * Calcule l'âge d'apogée à partir des données de vieillissement.
    * @param {AgingDetails} agingDetails - Détails de vieillissement
    * @returns {number} - Âge d'apogée estimé
    */
@@ -170,10 +173,10 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
   };
 
   /**
-   * Génère les points pour la courbe de vieillissement
+   * Génère les points pour la courbe de vieillissement.
    * @param {WineData} wine - Données du vin
    * @param {AgingDetails} agingDetails - Détails de vieillissement
-   * @returns {Array} - Points de données pour le graphique
+   * @returns {DataPoint[]} - Points de données pour le graphique
    */
   const generateAgingCurvePoints = (wine: WineData, agingDetails: AgingDetails): DataPoint[] => {
     if (!wine || !wine.vintage || !agingDetails) return [];
@@ -205,7 +208,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
         quality = 90 - decline * 80;
       }
       
-      // Assurer que la qualité reste dans les limites raisonnables
+      // S'assurer que la qualité reste dans des limites raisonnables
       quality = Math.max(10, Math.min(100, quality));
       
       // Déterminer la phase
@@ -259,12 +262,17 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
       return (
         <Paper className="p-2 bg-white shadow-sm rounded-md border border-gray-200 text-xs" elevation={3}>
           <Typography variant="subtitle2">{data.year} (Âge: {data.age} ans)</Typography>
-          <Typography variant="body2" color="textSecondary">Phase: {data.phaseLabel}</Typography>
-          <Typography variant="body2" color="textSecondary">Qualité estimée: {data.quality}%</Typography>
-          
+          <Typography variant="body2" color="textSecondary">
+            Phase: {data.phaseLabel}
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            Qualité estimée: {data.quality}%
+          </Typography>
           {data.year === new Date().getFullYear() && (
             <Box mt={1} pt={1} borderTop={1} borderColor="divider">
-              <Typography variant="body2" color="primary">Année courante</Typography>
+              <Typography variant="body2" color="primary">
+                Année courante
+              </Typography>
             </Box>
           )}
         </Paper>
@@ -282,22 +290,26 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
     );
   }
   
-  // Si erreur, afficher un message
+  // Si une erreur survient, afficher un message d'erreur
   if (error) {
     return (
       <Paper elevation={0} className="p-4 bg-gray-50 rounded-xl text-center">
         <ErrorOutlineIcon color="error" />
-        <Typography color="error" variant="body2">{error}</Typography>
+        <Typography color="error" variant="body2">
+          {error}
+        </Typography>
       </Paper>
     );
   }
   
-  // Si pas de données ou pas de millésime, afficher un message
+  // Si aucune donnée n'est disponible ou le millésime manque, afficher un message informatif
   if (agingData.length === 0 || !wine?.vintage) {
     return (
       <Paper elevation={0} className="p-4 bg-gray-50 rounded-xl text-center">
         <InfoOutlinedIcon color="disabled" />
-        <Typography color="textSecondary">Données de vieillissement non disponibles</Typography>
+        <Typography color="textSecondary">
+          Données de vieillissement non disponibles
+        </Typography>
       </Paper>
     );
   }
@@ -306,11 +318,11 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
   return (
     <Box className="w-full" style={{ position: 'relative' }}>
       {/* Carte principale contenant le graphique */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          p: 2, 
-          border: '1px solid', 
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          border: '1px solid',
           borderColor: 'divider',
           borderRadius: 2,
           overflow: 'hidden'
@@ -322,13 +334,8 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
             <AccessTimeIcon sx={{ mr: 1, color: colorStyle.stroke }} />
             Courbe de vieillissement
           </Typography>
-          
           {refreshable && (
-            <Button 
-              size="small" 
-              startIcon={<AutorenewIcon />} 
-              onClick={() => loadAgingData(true)}
-            >
+            <Button size="small" startIcon={<AutorenewIcon />} onClick={() => loadAgingData(true)}>
               Actualiser
             </Button>
           )}
@@ -345,7 +352,6 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
               variant="outlined"
               sx={{ mr: 1 }}
             />
-            
             {agingDetails?.drink_now && (
               <Chip
                 icon={<WineBarIcon />}
@@ -361,47 +367,43 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
         {/* Graphique */}
         <Box style={{ height: height, width: '100%', overflow: 'hidden' }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart 
-              data={agingData} 
-              margin={{ top: 5, right: 5, left: 0, bottom: 5 }}
-            >
+            <AreaChart data={agingData} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
               <defs>
                 <linearGradient id="colorQuality" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={colorStyle.stroke} stopOpacity={0.6}/>
-                  <stop offset="95%" stopColor={colorStyle.stroke} stopOpacity={0}/>
+                  <stop offset="5%" stopColor={colorStyle.stroke} stopOpacity={0.6} />
+                  <stop offset="95%" stopColor={colorStyle.stroke} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis 
-                dataKey="year" 
-                tickFormatter={(value) => value % 4 === 0 ? value : ''} 
+              <XAxis
+                dataKey="year"
+                tickFormatter={(value) => (value % 4 === 0 ? value : '')}
                 tick={{ fontSize: 10 }}
                 height={20}
                 tickSize={5}
                 axisLine={{ stroke: '#E0E0E0' }}
               />
-              <YAxis 
-                tick={{ fontSize: 9 }} 
-                domain={[0, 100]} 
-                tickFormatter={(value) => value === 0 ? '' : value === 100 ? value : ''}
+              <YAxis
+                tick={{ fontSize: 9 }}
+                domain={[0, 100]}
+                tickFormatter={(value) => (value === 0 ? '' : value === 100 ? value : '')}
                 width={20}
                 tickSize={3}
                 axisLine={{ stroke: '#E0E0E0' }}
               />
               <Tooltip content={<CustomTooltip />} />
-              <Area 
-                type="monotone" 
-                dataKey="quality" 
-                stroke={colorStyle.stroke} 
+              <Area
+                type="monotone"
+                dataKey="quality"
+                stroke={colorStyle.stroke}
                 strokeWidth={1.5}
-                fillOpacity={1} 
-                fill="url(#colorQuality)" 
+                fillOpacity={1}
+                fill="url(#colorQuality)"
               />
-              
               {/* Ligne verticale pour l'année actuelle */}
-              <ReferenceLine 
-                x={new Date().getFullYear()} 
-                stroke="#FF0000" 
-                strokeWidth={1} 
+              <ReferenceLine
+                x={new Date().getFullYear()}
+                stroke="#FF0000"
+                strokeWidth={1}
                 strokeDasharray="3 3"
                 label={{
                   value: 'Auj.',
@@ -411,34 +413,32 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
                   dy: -2
                 }}
               />
-              
               {/* Points clés pour chaque phase */}
               {agingData
-                .filter(d => (
+                .filter((d) => (
                   (d.phase === "youth" && d.age === Math.floor(estimatedPeakAge * 0.15)) ||
                   (d.phase === "development" && d.age === Math.floor(estimatedPeakAge * 0.7)) ||
                   (d.phase === "peak" && d.age === estimatedPeakAge) ||
                   (d.phase === "decline" && d.age === Math.floor(estimatedPeakAge * 1.8))
                 ))
                 .map((d, i) => (
-                  <ReferenceLine 
+                  <ReferenceLine
                     key={i}
-                    x={d.year} 
+                    x={d.year}
                     stroke="transparent"
-                    label={{ 
-                      value: d.phase.charAt(0).toUpperCase(), 
-                      position: 'top', 
+                    label={{
+                      value: d.phase.charAt(0).toUpperCase(),
+                      position: 'top',
                       fontSize: 9,
                       dy: -8
                     }}
                   />
-                ))
-              }
+                ))}
             </AreaChart>
           </ResponsiveContainer>
         </Box>
         
-        {/* Légende compacte sous le graphique */}
+        {/* Légende sous le graphique */}
         <Box className="grid grid-cols-4 text-center text-xs text-gray-600 mt-1">
           <Box>
             <Typography variant="caption">Jeunesse</Typography>
@@ -464,14 +464,14 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
         </Box>
       </Paper>
       
-      {/* Détails supplémentaires si demandés */}
+      {/* Détails supplémentaires */}
       {showDetails && agingDetails && (
-        <Paper 
-          elevation={0} 
-          sx={{ 
-            p: 2, 
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
             mt: 2,
-            border: '1px solid', 
+            border: '1px solid',
             borderColor: 'divider',
             borderRadius: 2
           }}
@@ -479,9 +479,7 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
           <Typography variant="subtitle2" gutterBottom>
             Détails du potentiel de vieillissement
           </Typography>
-          
           <Divider sx={{ mb: 2 }} />
-          
           <Box className="grid grid-cols-2 gap-2">
             <Box display="flex" alignItems="center">
               <CalendarTodayIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
@@ -489,24 +487,18 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
                 <Typography variant="caption" color="textSecondary">
                   Millésime
                 </Typography>
-                <Typography variant="body2">
-                  {wine.vintage}
-                </Typography>
+                <Typography variant="body2">{wine.vintage}</Typography>
               </Box>
             </Box>
-            
             <Box display="flex" alignItems="center">
               <HourglassTopIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
               <Box>
                 <Typography variant="caption" color="textSecondary">
                   Potentiel de garde
                 </Typography>
-                <Typography variant="body2">
-                  {agingDetails.potential_years} ans
-                </Typography>
+                <Typography variant="body2">{agingDetails.potential_years} ans</Typography>
               </Box>
             </Box>
-            
             <Box display="flex" alignItems="center">
               <UpdateIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
               <Box>
@@ -527,7 +519,6 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
                 </Typography>
               </Box>
             </Box>
-            
             <Box display="flex" alignItems="center">
               <WineBarIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />
               <Box>
@@ -540,7 +531,6 @@ const WineAgingCurve: React.FC<WineAgingCurveProps> = ({
               </Box>
             </Box>
           </Box>
-          
           <Box mt={2} textAlign="center">
             <Chip
               label={agingDetails.drink_now ? "Prêt à boire maintenant" : "Encore en développement"}

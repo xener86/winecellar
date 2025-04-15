@@ -46,7 +46,7 @@ export default function Home() {
         </Typography>
         
         <Grid container spacing={3} sx={{ mt: 2 }}>
-          <Grid xs={12} md={4}>
+          <Grid component="div" sx={{ width: { xs: '100%', md: '33%' } }}>
             <Card>
               <CardContent>
                 <Typography variant="h5" component="div">

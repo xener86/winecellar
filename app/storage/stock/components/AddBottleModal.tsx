@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+// storage/stock/components/AddBottleModal.tsx
+// CORRECTION: Importer useCallback
+import React, { useState, useEffect, useCallback } from 'react'; 
 import {
   Dialog,
   DialogTitle,
@@ -17,13 +19,13 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  SelectChangeEvent // Importer SelectChangeEvent pour l'utiliser
 } from '@mui/material';
-// IMPORTANT : On importe Grid depuis le chemin spécifique
-import Grid from '@mui/material/Grid';
-
+import Grid from '@mui/material/Grid'; // Utilisation de Grid ici
 import { supabase } from '../../../utils/supabase';
 
+// Déplacer l'interface Wine ici ou l'importer d'un fichier centralisé
 interface Wine {
   id: string;
   name: string;
@@ -33,13 +35,12 @@ interface Wine {
   region?: string | null;
   appellation?: string | null;
   alcohol_percentage?: number | null;
-  // Ajoutez ici d'autres champs si votre table `wine` en contient
 }
 
 type AddBottleModalProps = {
   open: boolean;
   onClose: () => void;
-  crateId: string;
+  crateId: string; // ID de la caisse à laquelle ajouter
   onBottleAdded: () => void;
 };
 
@@ -55,97 +56,100 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'existing' | 'new'>('existing');
 
-  // On remplace any par un tableau de Wine
-  const [wines, setWines] = useState<Wine[]>([]);
+  const [wines, setWines] = useState<Wine[]>([]); // Utiliser le type Wine défini
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // États pour créer un nouveau vin
-  const [newWine, setNewWine] = useState<Wine>({
+  // Préciser le type pour Wine
+  const [newWine, setNewWine] = useState<Omit<Wine, 'id'>>({ // Omettre 'id' car il sera généré
     name: '',
-    color: 'red',
-    vintage: new Date().getFullYear(),
+    color: 'red', // Valeur par défaut valide
+    vintage: new Date().getFullYear(), // Valeur par défaut
     domain: '',
     region: '',
     appellation: '',
     alcohol_percentage: null
   });
 
-  // Charger les vins existants
-  // Ajout de fetchWines dans les dépendances du useEffect
-  useEffect(() => {
-    if (open && mode === 'existing') {
-      fetchWines();
-    }
-  }, [open, mode, searchTerm]);
-
-  const fetchWines = async () => {
+  // CORRECTION: Envelopper fetchWines dans useCallback
+  const fetchWines = useCallback(async () => {
     setLoading(true);
     try {
       let query = supabase.from('wine').select('*');
 
-      if (searchTerm) {
+      // searchTerm est utilisé ici, il doit être une dépendance de useCallback
+      if (searchTerm) { 
         query = query.ilike('name', `%${searchTerm}%`);
       }
 
       const { data, error } = await query.order('name');
       if (error) throw error;
 
-      setWines(data || []);
+      setWines((data || []) as Wine[]); // Cast en Wine[] si la structure correspond
     } catch (error: unknown) {
       if (error instanceof Error) {
-        console.error('Erreur lors du chargement des vins :', error.message);
+        console.error('Erreur chargement vins:', error.message);
       } else {
-        console.error('Erreur lors du chargement des vins :', error);
+        console.error('Erreur chargement vins:', error);
       }
+      // Ajouter une notification utilisateur ici serait une bonne pratique
     } finally {
       setLoading(false);
     }
-  };
+  // Dépendances de useCallback: searchTerm
+  }, [searchTerm]); 
+
+
+  // CORRECTION: Ajouter fetchWines aux dépendances du useEffect
+  useEffect(() => {
+    // Charger les vins seulement si le modal est ouvert et en mode 'existant'
+    if (open && mode === 'existing') {
+      fetchWines(); 
+    }
+    // Ajouter fetchWines (stable grâce à useCallback) aux dépendances
+  }, [open, mode, searchTerm, fetchWines]); 
 
   // Fonction pour ajouter une bouteille existante
   const handleAddExistingWine = async () => {
     if (!selectedWine) return;
-
     setLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) throw new Error('Utilisateur non connecté');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Utilisateur non connecté');
 
-      // On ne stocke plus 'data' vu qu'elle n'est pas utilisée
       const { error } = await supabase.from('bottle').insert({
         wine_id: selectedWine.id,
-        crate_id: crateId,
+        crate_id: crateId, // Utiliser la prop crateId
         status: 'in_stock',
         acquisition_date: new Date().toISOString().split('T')[0],
-        user_id: userData.user.id
+        user_id: user.id
       });
-
       if (error) throw error;
 
-      onBottleAdded();
-      handleClose();
+      onBottleAdded(); // Appeler le callback de succès
+      handleClose(); // Fermer le modal
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error("Erreur lors de l'ajout de la bouteille :", error.message);
-        alert(`Erreur: ${error.message}`);
-      } else {
-        console.error("Erreur lors de l'ajout de la bouteille :", error);
-        alert(`Erreur: une erreur inconnue est survenue`);
-      }
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error("Erreur ajout bouteille:", message);
+      alert(`Erreur: ${message}`);
     } finally {
       setLoading(false);
     }
   };
+  const handleColorChange = (event: SelectChangeEvent<string>) => {
+    setNewWine(prev => ({
+      ...prev,
+      color: event.target.value as Wine['color']
+    }));
+  };
 
-  // Fonction pour créer un nouveau vin et l'ajouter
+  // Fonction pour créer un nouveau vin et ajouter la bouteille
   const handleAddNewWine = async () => {
-    if (!newWine.name) return;
-
+    if (!newWine.name) return; // Vérification basique
     setLoading(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData?.user) throw new Error('Utilisateur non connecté');
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error('Utilisateur non connecté');
 
       // Créer le nouveau vin
       const { data: wineData, error: wineError } = await supabase
@@ -153,59 +157,69 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
         .insert({
           name: newWine.name,
           color: newWine.color,
-          vintage: newWine.vintage,
+          // S'assurer que vintage est number ou null
+          vintage: typeof newWine.vintage === 'number' ? newWine.vintage : null, 
           domain: newWine.domain || null,
           region: newWine.region || null,
           appellation: newWine.appellation || null,
           alcohol_percentage: newWine.alcohol_percentage,
-          user_id: userData.user.id
+          user_id: user.id // Lier à l'utilisateur
         })
-        .select()
-        .single();
+        .select() // Récupérer l'enregistrement créé
+        .single(); // S'attendre à un seul résultat
 
       if (wineError) throw wineError;
+      if (!wineData) throw new Error("La création du vin n'a pas retourné de données.");
 
-      // Créer la bouteille associée à ce vin
+      // Créer la bouteille associée
       const { error: bottleError } = await supabase.from('bottle').insert({
-        wine_id: wineData.id,
-        crate_id: crateId,
+        wine_id: wineData.id, // Utiliser l'ID du vin créé
+        crate_id: crateId, // Utiliser la prop crateId
         status: 'in_stock',
         acquisition_date: new Date().toISOString().split('T')[0],
-        user_id: userData.user.id
+        user_id: user.id
       });
-
       if (bottleError) throw bottleError;
 
-      onBottleAdded();
-      handleClose();
+      onBottleAdded(); // Callback de succès
+      handleClose(); // Fermer
     } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Erreur lors de la création du vin :', error.message);
-        alert(`Erreur: ${error.message}`);
-      } else {
-        console.error('Erreur lors de la création du vin :', error);
-        alert(`Erreur: une erreur inconnue est survenue`);
-      }
+      const message = error instanceof Error ? error.message : 'Erreur inconnue';
+      console.error('Erreur création vin/bouteille:', message);
+      alert(`Erreur: ${message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  // Réinitialiser le formulaire lors de la fermeture
+  // Réinitialiser le formulaire et fermer
   const handleClose = () => {
     setSelectedWine(null);
     setNewWine({
-      name: '',
-      color: 'red',
-      vintage: new Date().getFullYear(),
-      domain: '',
-      region: '',
-      appellation: '',
-      alcohol_percentage: null
+      name: '', color: 'red', vintage: new Date().getFullYear(), 
+      domain: '', region: '', appellation: '', alcohol_percentage: null
     });
     setSearchTerm('');
-    onClose();
+    setMode('existing'); // Revenir au mode par défaut ?
+    onClose(); // Appeler le onClose passé en prop
   };
+
+  // Gestionnaire de changement pour les champs du nouveau vin
+  const handleNewWineChange = (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<Wine['color']>
+    ) => {
+    const { name, value } = e.target;
+    if(name) {
+       setNewWine(prev => ({
+          ...prev,
+          // Gérer la conversion pour vintage et alcohol_percentage
+          [name]: (name === 'vintage' || name === 'alcohol_percentage') 
+                 ? (value === '' ? null : name === 'vintage' ? parseInt(value, 10) : parseFloat(value)) 
+                 : value
+       }));
+    }
+  };
+
 
   return (
     <Dialog
@@ -213,59 +227,37 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
       onClose={handleClose}
       fullWidth
       maxWidth="md"
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          bgcolor: isDarkMode ? '#1A1A1A' : 'white'
-        }
-      }}
+      PaperProps={{ sx: { borderRadius: 2, bgcolor: isDarkMode ? '#1A1A1A' : 'white' } }}
     >
-      <DialogTitle>Ajouter une bouteille</DialogTitle>
+      <DialogTitle>Ajouter une bouteille à la caisse</DialogTitle> 
 
       <DialogContent>
-        {/* On utilise FormControl + RadioGroup pour le choix du mode */}
         <FormControl component="fieldset" sx={{ mb: 3 }}>
-          <RadioGroup
-            row
-            value={mode}
-            onChange={(e) => setMode(e.target.value as 'existing' | 'new')}
-          >
-            <FormControlLabel
-              value="existing"
-              control={<Radio />}
-              label="Choisir un vin existant"
-            />
-            <FormControlLabel
-              value="new"
-              control={<Radio />}
-              label="Ajouter un nouveau vin"
-            />
+          <RadioGroup row value={mode} onChange={(e) => setMode(e.target.value as 'existing' | 'new')}>
+            <FormControlLabel value="existing" control={<Radio />} label="Choisir un vin existant" />
+            <FormControlLabel value="new" control={<Radio />} label="Ajouter un nouveau vin" />
           </RadioGroup>
         </FormControl>
 
         {mode === 'existing' ? (
+          // --- Section Vin Existant ---
           <Box>
             <Autocomplete
               options={wines}
-              loading={loading}
-              getOptionLabel={(option) =>
-                `${option.name} ${option.vintage || ''}${
-                  option.domain ? ` (${option.domain})` : ''
-                }`
-              }
+              loading={loading && wines.length === 0} // Afficher loading seulement si on charge initialement
+              getOptionLabel={(option) => `${option.name} ${option.vintage || ''}${option.domain ? ` (${option.domain})` : ''}` }
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Rechercher un vin"
+                  label="Rechercher un vin existant"
                   variant="outlined"
+                  value={searchTerm} // Lier value à searchTerm pour le contrôle
                   onChange={(e) => setSearchTerm(e.target.value)}
                   InputProps={{
                     ...params.InputProps,
                     endAdornment: (
                       <>
-                        {loading && (
-                          <CircularProgress color="inherit" size={20} />
-                        )}
+                        {loading ? <CircularProgress color="inherit" size={20} /> : null}
                         {params.InputProps.endAdornment}
                       </>
                     )
@@ -274,219 +266,83 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
               )}
               value={selectedWine}
               onChange={(_, newValue) => setSelectedWine(newValue)}
+              isOptionEqualToValue={(option, value) => option.id === value?.id} // Important pour comparer objets
               renderOption={(props, option) => (
-                <Box component="li" {...props}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <Typography variant="body1">
-                      {option.name} {option.vintage || ''}
-                    </Typography>
+                // Ajouter key ici pour la performance de React
+                <Box component="li" {...props} key={option.id}> 
+                  <Box> {/* Pas besoin de flex ici */}
+                    <Typography variant="body1">{option.name} {option.vintage || ''}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       {option.domain && `${option.domain}`}
-                      {option.region && ` - ${option.region}`}
+                      {option.region && `${option.domain ? ' - ' : ''}${option.region}`}
                     </Typography>
                   </Box>
                 </Box>
               )}
+              noOptionsText="Aucun vin trouvé"
+              loadingText="Chargement..."
             />
 
+            {/* Affichage des détails du vin sélectionné (pour confirmation) */}
             {selectedWine && (
-              <Box
-                sx={{
-                  mt: 3,
-                  p: 2,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 2,
-                  bgcolor: isDarkMode
-                    ? 'rgba(255,255,255,0.03)'
-                    : 'rgba(0,0,0,0.02)'
-                }}
-              >
-                <Typography variant="subtitle1" gutterBottom>
-                  Détails du vin sélectionné
-                </Typography>
-
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Nom:
-                    </Typography>
-                    <Typography variant="body1">{selectedWine.name}</Typography>
-                  </Grid>
-
-                  <Grid item xs={12} sm={6}>
-                    <Typography variant="body2" color="text.secondary">
-                      Couleur:
-                    </Typography>
-                    <Typography variant="body1">
-                      {selectedWine.color === 'red'
-                        ? 'Rouge'
-                        : selectedWine.color === 'white'
-                        ? 'Blanc'
-                        : selectedWine.color === 'rose'
-                        ? 'Rosé'
-                        : selectedWine.color === 'sparkling'
-                        ? 'Effervescent'
-                        : 'Fortifié'}
-                    </Typography>
-                  </Grid>
-
-                  {selectedWine.vintage && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Millésime:
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedWine.vintage}
-                      </Typography>
-                    </Grid>
-                  )}
-
-                  {selectedWine.domain && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Domaine:
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedWine.domain}
-                      </Typography>
-                    </Grid>
-                  )}
-
-                  {selectedWine.region && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Région:
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedWine.region}
-                      </Typography>
-                    </Grid>
-                  )}
-
-                  {selectedWine.appellation && (
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
-                        Appellation:
-                      </Typography>
-                      <Typography variant="body1">
-                        {selectedWine.appellation}
-                      </Typography>
-                    </Grid>
-                  )}
+              <Box sx={{ mt: 3, p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
+                <Typography variant="subtitle1" gutterBottom>Vin sélectionné</Typography>
+                <Grid container spacing={1}>
+                <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                <Typography variant="body2"><b>Nom:</b> {selectedWine.name}</Typography></Grid>
+                <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                <Typography variant="body2"><b>Couleur:</b> {selectedWine.color}</Typography></Grid>
+                  {selectedWine.vintage && <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                  <Typography variant="body2"><b>Millésime:</b> {selectedWine.vintage}</Typography></Grid>}
+                  {selectedWine.domain &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                  <Typography variant="body2"><b>Domaine:</b> {selectedWine.domain}</Typography></Grid>}
+                  {selectedWine.region &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                  <Typography variant="body2"><b>Région:</b> {selectedWine.region}</Typography></Grid>}
+                  {selectedWine.appellation &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                  <Typography variant="body2"><b>Appellation:</b> {selectedWine.appellation}</Typography></Grid>}
                 </Grid>
               </Box>
             )}
           </Box>
         ) : (
+          // --- Section Nouveau Vin ---
           <Box>
-            <Typography variant="subtitle2" gutterBottom>
-              Informations sur le nouveau vin
-            </Typography>
-
+            <Typography variant="subtitle2" gutterBottom>Informations sur le nouveau vin</Typography>
             <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  label="Nom du vin"
-                  fullWidth
-                  required
-                  value={newWine.name}
-                  onChange={(e) =>
-                    setNewWine({ ...newWine, name: e.target.value })
-                  }
-                />
-              </Grid>
+            <Grid component="div" sx={{ width: { xs: '100%'} }}>
 
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth>
+                <TextField label="Nom du vin" name="name" fullWidth required value={newWine.name} onChange={handleNewWineChange}/>
+              </Grid>
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+              <FormControl fullWidth>
                   <InputLabel>Couleur</InputLabel>
-                  <Select
-                    value={newWine.color}
-                    label="Couleur"
-                    onChange={(e) =>
-                      setNewWine({ ...newWine, color: e.target.value as Wine['color'] })
-                    }
-                  >
-                    <MenuItem value="red">Rouge</MenuItem>
-                    <MenuItem value="white">Blanc</MenuItem>
-                    <MenuItem value="rose">Rosé</MenuItem>
-                    <MenuItem value="sparkling">Effervescent</MenuItem>
-                    <MenuItem value="fortified">Fortifié</MenuItem>
-                  </Select>
+                  <Select 
+  name="color" 
+  value={newWine.color} 
+  label="Couleur" 
+  onChange={handleColorChange}>
+  <MenuItem value="red">Rouge</MenuItem>
+  <MenuItem value="white">Blanc</MenuItem>
+  <MenuItem value="rose">Rosé</MenuItem>
+  <MenuItem value="sparkling">Effervescent</MenuItem>
+  <MenuItem value="fortified">Fortifié</MenuItem>
+</Select>
                 </FormControl>
               </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Millésime"
-                  type="number"
-                  fullWidth
-                  value={newWine.vintage ?? ''}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    setNewWine({
-                      ...newWine,
-                      vintage: isNaN(val) ? null : val
-                    });
-                  }}
-                  inputProps={{
-                    min: 1900,
-                    max: new Date().getFullYear()
-                  }}
-                />
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+              <TextField label="Millésime" name="vintage" type="number" fullWidth value={newWine.vintage ?? ''} onChange={handleNewWineChange} inputProps={{ min: 1900, max: new Date().getFullYear() }} />
               </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Domaine"
-                  fullWidth
-                  value={newWine.domain ?? ''}
-                  onChange={(e) =>
-                    setNewWine({ ...newWine, domain: e.target.value })
-                  }
-                />
+                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                <TextField label="Domaine" name="domain" fullWidth value={newWine.domain ?? ''} onChange={handleNewWineChange}/>
               </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Région"
-                  fullWidth
-                  value={newWine.region ?? ''}
-                  onChange={(e) =>
-                    setNewWine({ ...newWine, region: e.target.value })
-                  }
-                />
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+              <TextField label="Région" name="region" fullWidth value={newWine.region ?? ''} onChange={handleNewWineChange}/>
               </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Appellation"
-                  fullWidth
-                  value={newWine.appellation ?? ''}
-                  onChange={(e) =>
-                    setNewWine({ ...newWine, appellation: e.target.value })
-                  }
-                />
+                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                <TextField label="Appellation" name="appellation" fullWidth value={newWine.appellation ?? ''} onChange={handleNewWineChange}/>
               </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Degré d'alcool (%)"
-                  type="number"
-                  fullWidth
-                  value={newWine.alcohol_percentage ?? ''}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setNewWine({
-                      ...newWine,
-                      alcohol_percentage: isNaN(val) ? null : val
-                    });
-                  }}
-                  inputProps={{
-                    min: 0,
-                    max: 100,
-                    step: 0.1
-                  }}
-                />
+              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+              <TextField label="Degré d'alcool (%)" name="alcohol_percentage" type="number" fullWidth value={newWine.alcohol_percentage ?? ''} onChange={handleNewWineChange} inputProps={{ min: 0, max: 100, step: 0.1 }} />
               </Grid>
             </Grid>
           </Box>
@@ -494,18 +350,14 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
       </DialogContent>
 
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={handleClose} sx={{ borderRadius: 2 }} disabled={loading}>
-          Annuler
-        </Button>
+        <Button onClick={handleClose} sx={{ borderRadius: 2 }} disabled={loading}>Annuler</Button>
         <Button
           onClick={mode === 'existing' ? handleAddExistingWine : handleAddNewWine}
           variant="contained"
-          disabled={
-            loading || (mode === 'existing' ? !selectedWine : !newWine.name)
-          }
+          disabled={loading || (mode === 'existing' ? !selectedWine : !newWine.name)}
           sx={{ borderRadius: 2 }}
         >
-          {loading ? <CircularProgress size={24} color="inherit" /> : 'Ajouter'}
+          {loading ? <CircularProgress size={24} color="inherit" /> : 'Ajouter la bouteille'}
         </Button>
       </DialogActions>
     </Dialog>

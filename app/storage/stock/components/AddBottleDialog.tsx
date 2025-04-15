@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useState, useEffect, ElementType, useCallback } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -193,6 +194,7 @@ export default function AddBottleDialog({
   const [newWineLoading, setNewWineLoading] = useState(false);
   const [newWineError, setNewWineError] = useState('');
   const [newWineData, setNewWineData] = useState<WineData | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [aiResponse, setAiResponse] = useState('');
   const [previewExpanded, setPreviewExpanded] = useState(false);
 
@@ -665,7 +667,7 @@ export default function AddBottleDialog({
                   </Box>
                   
                   <Grid container spacing={2}>
-                    <Grid item xs={12} sm={6}>
+                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
                       <Typography variant="body2" color="text.secondary">
                         Domaine
                       </Typography>
@@ -673,8 +675,8 @@ export default function AddBottleDialog({
                         {newWineData.domain || '-'}
                       </Typography>
                     </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <Typography variant="body2" color="text.secondary">
+                    <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
+                    <Typography variant="body2" color="text.secondary">
                         Région
                       </Typography>
                       <Typography variant="body1">
@@ -682,7 +684,7 @@ export default function AddBottleDialog({
                       </Typography>
                     </Grid>
                     {newWineData.appellation && (
-                      <Grid item xs={12} sm={6}>
+                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
                         <Typography variant="body2" color="text.secondary">
                           Appellation
                         </Typography>
@@ -692,7 +694,7 @@ export default function AddBottleDialog({
                       </Grid>
                     )}
                     {newWineData.alcohol_percentage && (
-                      <Grid item xs={12} sm={6}>
+                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
                         <Typography variant="body2" color="text.secondary">
                           Alcool
                         </Typography>

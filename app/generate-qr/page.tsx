@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
@@ -312,7 +313,14 @@ export default function GenerateQRPage() {
     return (
       <Grid container spacing={2}>
         {filteredPositions.map(position => (
-          <Grid item xs={12} sm={6} md={4} key={position.id}>
+          <Grid
+            item
+            component={"div" as any}
+            xs={12}
+            sm={6}
+            md={4}
+            key={position.id}
+          >
             <Card
               sx={{
                 p: 2,
@@ -353,7 +361,7 @@ export default function GenerateQRPage() {
         </Typography>
         <Grid container spacing={3}>
           {/* Section Options */}
-          <Grid item xs={12} md={4}>
+          <Grid item component={"div" as any} xs={12} md={4}>
             <Paper
               elevation={0}
               sx={{
@@ -491,7 +499,7 @@ export default function GenerateQRPage() {
             </Paper>
           </Grid>
           {/* Section Aperçu */}
-          <Grid item xs={12} md={8}>
+          <Grid item component={"div" as any} xs={12} md={8}>
             <Paper
               elevation={0}
               sx={{

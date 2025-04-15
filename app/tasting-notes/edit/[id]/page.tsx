@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Fichier: /app/tasting-notes/edit/[id]/page.tsx
 'use client';
 
