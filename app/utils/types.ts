@@ -7,7 +7,7 @@ export interface DBWine {
   region: string | null;
   appellation: string | null;
   alcohol_percentage: number | null;
-  country: string; // ✅ Ajoute cette ligne
+  country: string;
 }
 
 export interface Bottle {
@@ -18,7 +18,7 @@ export interface Bottle {
   wine?: DBWine;
 }
 
-export type PairingMode = 'all' | 'classic' | 'audacious' | 'merchant';
+export type PairingMode = 'all' | 'classic' | 'audacious' | 'heart' | 'merchant';
 export type SourceMode = 'all' | 'cellar' | 'store';
 
 export interface FoodPairing {
@@ -35,10 +35,35 @@ export interface FoodPairing {
   wine?: DBWine | string | null;
 }
 
+export interface WineRecommendation {
+  id: string;
+  food: string;
+  wine_type: string;
+  grape: string;
+  characteristics: string;
+  explanation: string;
+  pairing_type: 'classic' | 'audacious' | 'heart' | 'merchant';
+  wine?: DBWine; // Ajout pour permettre l'inclusion d'un objet vin
+}
+
+export interface BottleMatch {
+  bottle_id: string;
+  wine_id: string;
+  match_quality: 'perfect' | 'good' | 'alternative';
+  explanation: string;
+  wine?: DBWine; // Ajout du champ wine pour stocker les données du vin
+}
+
+export interface CellarMatch {
+  recommendation: WineRecommendation;
+  matches: BottleMatch[];
+}
+
 export interface ApiKeys {
   openai: string;
   mistral: string;
 }
+
 export type WineObject = {
   id: string;
   name: string;
@@ -52,6 +77,10 @@ export type WineObject = {
 };
 
 export interface PairingOptions {
-  apiKey: string; // ✅ une seule clé (openai OU mistral)
+  apiKey: string;
   apiProvider: keyof ApiKeys; // "openai" | "mistral"
+  sourceMode?: 'all' | 'cellar' | 'store';
+  wineType?: string;
+  pairingMode?: PairingMode;
+  userId?: string;
 }

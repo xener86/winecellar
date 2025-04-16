@@ -9,6 +9,7 @@ import {
   Box,
   Rating,
   Tooltip,
+  Chip,
 } from '@mui/material';
 
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
@@ -19,7 +20,7 @@ import StarIcon from '@mui/icons-material/Star';
 import { FoodPairing, DBWine, ApiKeys } from '@/utils/types';
 
 export interface PairingProps {
-  wine: DBWine;
+  wine: DBWine | null | undefined;
   food: string;
   mode: 'byFood' | 'byWine';
   compact?: boolean;
@@ -35,6 +36,33 @@ export interface PairingProps {
   userRating?: number;
 }
 
+// Fonction auxiliaire pour obtenir le style de couleur basé sur le type de vin
+const getWineColorStyle = (wine: DBWine | null | undefined) => {
+  if (!wine || !wine.color) {
+    // Retourner une couleur par défaut si wine ou wine.color n'existe pas
+    return { bgcolor: 'grey.300', color: 'text.primary' };
+  }
+
+  const color = wine.color.toLowerCase();
+  
+  switch (color) {
+    case 'red':
+    case 'rouge':
+      return { bgcolor: 'error.main', color: 'white' };
+    case 'white':
+    case 'blanc':
+      return { bgcolor: 'warning.light', color: 'text.primary' };
+    case 'rosé':
+    case 'rose':
+      return { bgcolor: 'pink.400', color: 'white' };
+    case 'sparkling':
+    case 'effervescent':
+      return { bgcolor: 'info.light', color: 'text.primary' };
+    default:
+      return { bgcolor: 'grey.300', color: 'text.primary' };
+  }
+};
+
 const Pairing: React.FC<PairingProps> = ({
   wine,
   food,
@@ -46,14 +74,19 @@ const Pairing: React.FC<PairingProps> = ({
   saved = false,
   userRating = 0,
 }) => {
+  // Ajouter des valeurs par défaut sécurisées
+  const wineName = wine?.name || 'Vin recommandé';
+  const wineId = wine?.id || `unknown-${Math.random().toString(36).substring(2, 9)}`;
+  const colorStyle = getWineColorStyle(wine);
+
   const handleSave = () => {
     if (!userId) return;
     if (saved && onRemove) {
-      onRemove(`${wine.id}-${food}`);
-    } else if (!saved && onSave) {
+      onRemove(`${wineId}-${food}`);
+    } else if (!saved && onSave && wine) {
       const pairing: FoodPairing = {
-        id: `${wine.id}-${food}`,
-        wine_id: wine.id,
+        id: `${wineId}-${food}`,
+        wine_id: wineId,
         wine,
         food,
         saved: true,
@@ -65,7 +98,7 @@ const Pairing: React.FC<PairingProps> = ({
 
   const handleRate = (_: unknown, value: number | null) => {
     if (onRate && value !== null) {
-      onRate(`${wine.id}-${food}`, value);
+      onRate(`${wineId}-${food}`, value);
     }
   };
 
@@ -73,9 +106,22 @@ const Pairing: React.FC<PairingProps> = ({
     <Card className="w-full" variant="outlined">
       <CardContent className="flex flex-col gap-2">
         <Box className="flex items-center justify-between">
-          <Typography variant="h6" className="font-bold">
-            {wine.name}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="h6" className="font-bold">
+              {wineName}
+            </Typography>
+            {wine?.color && (
+              <Chip 
+                label={wine.color} 
+                size="small" 
+                sx={{ 
+                  ml: 1,
+                  bgcolor: colorStyle.bgcolor,
+                  color: colorStyle.color
+                }} 
+              />
+            )}
+          </Box>
           <Tooltip title={saved ? 'Retirer des favoris' : 'Ajouter aux favoris'}>
             <IconButton onClick={handleSave} size="small">
               {saved ? <BookmarkIcon color="primary" /> : <BookmarkBorderIcon />}
@@ -87,11 +133,17 @@ const Pairing: React.FC<PairingProps> = ({
           Accord avec : <span className="font-medium">{food}</span>
         </Typography>
 
+        {wine?.vintage && (
+          <Typography variant="body2" color="text.secondary">
+            {wine.domain || 'Domaine non spécifié'} ({wine.vintage || 'N/A'})
+          </Typography>
+        )}
+
         {!compact && (
           <Box className="flex items-center justify-between mt-2">
             <Typography variant="body2">Votre note :</Typography>
             <Rating
-              name={`rating-${wine.id}-${food}`}
+              name={`rating-${wineId}-${food}`}
               value={userRating || 0}
               precision={0.5}
               onChange={handleRate}

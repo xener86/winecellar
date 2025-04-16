@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 
 import SearchIcon from '@mui/icons-material/Search';
+import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import WineBarIcon from '@mui/icons-material/WineBar';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 
@@ -26,6 +27,7 @@ import { supabase } from '@/utils/supabase';
 
 import Navbar from '@/components/Navbar';
 import FoodSearchTab from '@/components/tabs/FoodSearchTab';
+import TwoStepPairingTab from '@/components/tabs/TwoStepPairingTab';
 import WinePairingService from '@/services/WinePairingService';
 
 import {
@@ -33,7 +35,9 @@ import {
   FoodPairing,
   PairingMode,
   SourceMode,
-  ApiKeys
+  ApiKeys,
+  WineRecommendation,
+  CellarMatch
 } from '@/utils/types';
 
 export default function FoodPairingPage() {
@@ -49,15 +53,23 @@ export default function FoodPairingPage() {
 
   const [foodQuery, setFoodQuery] = useState('');
   const [selectedWineType, setSelectedWineType] = useState('');
-  // Utilisé pour stocker les bouteilles de la cave
-  const [, setCellarWines] = useState<Bottle[]>([]);
+  // Utilisé pour stocker les bouteilles de la cave - sera utilisé dans la méthode en deux étapes
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [cellarWines, setCellarWines] = useState<Bottle[]>([]);
 
-  const [pairingMode] = useState<PairingMode>('all');
-  const [pairingFilter] = useState<PairingMode>('all');
-  const [sourceMode] = useState<SourceMode>('all');
+  const [pairingMode, setPairingMode] = useState<PairingMode>('all');
+  const [pairingFilter, setPairingFilter] = useState<PairingMode>('all');
+  const [sourceMode, setSourceMode] = useState<SourceMode>('all');
   const [savedPairings, setSavedPairings] = useState<FoodPairing[]>([]);
   const [pairingResults, setPairingResults] = useState<FoodPairing[]>([]);
   const [pairingLoading, setPairingLoading] = useState(false);
+
+  // États pour la nouvelle méthode en deux étapes
+  const [wineRecommendations, setWineRecommendations] = useState<WineRecommendation[]>([]);
+  const [cellarMatches, setCellarMatches] = useState<CellarMatch[]>([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [cellarMatchesLoading, setCellarMatchesLoading] = useState(false);
+  const [showCellarMatches, setShowCellarMatches] = useState(false);
 
   const [notification, setNotification] = useState({
     open: false,
@@ -141,6 +153,8 @@ export default function FoodPairingPage() {
         apiKey: apiKeys[apiProvider],
         apiProvider,
         pairingMode,
+        sourceMode,
+        userId: userData?.id
       });
       setPairingResults(results);
     } catch (error) {
@@ -152,6 +166,65 @@ export default function FoodPairingPage() {
       });
     } finally {
       setPairingLoading(false);
+    }
+  };
+
+  // Nouvelle méthode en deux étapes - Étape 1: Obtenir les recommandations
+  const handleGetWineRecommendations = async () => {
+    if (!foodQuery.trim()) return;
+    
+    try {
+      setRecommendationsLoading(true);
+      setShowCellarMatches(false); // Réinitialiser l'affichage
+      setCellarMatches([]); // Réinitialiser les correspondances
+      
+      const recommendations = await WinePairingService.findPairingsByFood(foodQuery, {
+        apiKey: apiKeys[apiProvider],
+        apiProvider,
+        pairingMode,
+      });
+      
+      setWineRecommendations(recommendations);
+    } catch (error) {
+      console.error("Erreur lors de la recherche de recommandations:", error);
+      setNotification({
+        open: true,
+        message: "Erreur lors de la recherche de recommandations",
+        severity: "error"
+      });
+    } finally {
+      setRecommendationsLoading(false);
+    }
+  };
+
+  // Nouvelle méthode en deux étapes - Étape 2: Trouver les correspondances dans la cave
+  const handleFindCellarMatches = async () => {
+    if (wineRecommendations.length === 0 || !userData?.id) return;
+    
+    try {
+      setCellarMatchesLoading(true);
+      
+      const matches = await WinePairingService.findCellarMatches(
+        foodQuery,
+        wineRecommendations,
+        {
+          apiKey: apiKeys[apiProvider],
+          apiProvider,
+          userId: userData.id
+        }
+      );
+      
+      setCellarMatches(matches);
+      setShowCellarMatches(true);
+    } catch (error) {
+      console.error("Erreur lors de la recherche de correspondances:", error);
+      setNotification({
+        open: true,
+        message: "Erreur lors de la recherche de correspondances dans votre cave",
+        severity: "error"
+      });
+    } finally {
+      setCellarMatchesLoading(false);
     }
   };
 
@@ -217,12 +290,20 @@ export default function FoodPairingPage() {
     }
   };
 
-  // Cette fonction sera utilisée dans les onglets, même si elle n'est pas utilisée directement ici
-  // const handlePairingFilterChange = (_: unknown, val: unknown) => {
-  //   if (typeof val === 'string') {
-  //     setPairingFilter(val as PairingMode);
-  //   }
-  // };
+  // Ces fonctions sont conservées pour une utilisation future dans d'autres composants
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handlePairingFilterChange = (_: unknown, val: unknown) => {
+    if (typeof val === 'string') {
+      setPairingFilter(val as PairingMode);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleSourceModeChange = (_: unknown, val: unknown) => {
+    if (typeof val === 'string') {
+      setSourceMode(val as SourceMode);
+    }
+  };
 
   return (
     <>
@@ -249,7 +330,8 @@ export default function FoodPairingPage() {
           }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
               <Tabs value={tabIndex} onChange={(_, idx) => setTabIndex(idx)} variant="fullWidth">
-                <Tab icon={<SearchIcon />} label="Par plat" />
+                <Tab icon={<SearchIcon />} label="Méthode simple" />
+                <Tab icon={<RestaurantMenuIcon />} label="Méthode avancée" />
                 <Tab icon={<WineBarIcon />} label="Par vin" />
                 <Tab icon={
                   <Badge badgeContent={savedPairings.length} color="primary">
@@ -266,6 +348,9 @@ export default function FoodPairingPage() {
                   selectedWineType={selectedWineType}
                   setSelectedWineType={setSelectedWineType}
                   sourceMode={sourceMode}
+                  setSourceMode={setSourceMode}
+                  pairingMode={pairingMode}
+                  setPairingMode={setPairingMode}
                   apiKeys={apiKeys}
                   apiProvider={apiProvider}
                   pairingLoading={pairingLoading}
@@ -278,7 +363,31 @@ export default function FoodPairingPage() {
                   userId={userData?.id}
                 />
               )}
-              {/* WineSearchTab & SavedPairingsTab similaires... */}
+              {tabIndex === 1 && (
+                <TwoStepPairingTab
+                  foodQuery={foodQuery}
+                  setFoodQuery={setFoodQuery}
+                  selectedWineType={selectedWineType}
+                  setSelectedWineType={setSelectedWineType}
+                  sourceMode={sourceMode}
+                  pairingMode={pairingMode}
+                  apiKeys={apiKeys}
+                  apiProvider={apiProvider}
+                  userId={userData?.id}
+                  handleSearchByFood={handleGetWineRecommendations}
+                  findCellarMatches={handleFindCellarMatches}
+                  wineRecommendations={wineRecommendations}
+                  cellarMatches={cellarMatches}
+                  recommendationsLoading={recommendationsLoading}
+                  cellarMatchesLoading={cellarMatchesLoading}
+                  handleSavePairing={handleSavePairing}
+                  handleRemovePairing={handleRemovePairing}
+                  handleRatePairing={handleRatePairing}
+                  savedPairings={savedPairings}
+                  showCellarMatches={showCellarMatches}
+                />
+              )}
+              {/* WineSearchTab & SavedPairingsTab à implémenter */}
             </Box>
           </Paper>
         )}

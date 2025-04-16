@@ -12,18 +12,26 @@ export async function POST(req: NextRequest) {
     }
 
     const prompt = `
-Tu es un expert en accords mets-vins. Pour le plat suivant : "${foodQuery}", donne-moi 4 suggestions de vins avec les infos suivantes pour chaque :
-- nom du vin
-- type (rouge, blanc, rosé...)
+Tu es un expert en accords mets-vins. Pour le plat suivant : "${foodQuery}", donne-moi 6 suggestions de vins réparties en 3 catégories :
+
+- 2 accords classiques
+- 2 accords audacieux
+- 2 accords de cœur (tes recommandations personnelles)
+
+Pour chaque suggestion, fournis les informations suivantes :
+- type de vin (ex: Bourgogne blanc, Côtes du Rhône rouge, etc.)
+- cépage principal (si pertinent)
+- caractéristiques générales (ex: sec, fruité, tannique, minéral, etc.)
 - explication du choix
-- type d'accord : classique, audacieux ou caviste
+- type d'accord : "classic", "audacious", "heart"
 
 Réponds au format JSON :
 [
   {
-    "wine": "Chablis",
-    "wine_type": "white_dry",
-    "explanation": "Le Chablis équilibre la richesse du plat.",
+    "wine_type": "Chablis",
+    "grape": "Chardonnay",
+    "characteristics": "Blanc sec, minéral, notes d'agrumes",
+    "explanation": "La minéralité du Chablis équilibre la richesse du plat sans l'écraser",
     "pairing_type": "classic"
   },
   ...

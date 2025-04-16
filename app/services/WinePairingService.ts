@@ -1,10 +1,10 @@
 import { supabase } from '@/utils/supabase';
-import { DBWine, FoodPairing } from '@/utils/types';
+import { DBWine, FoodPairing, WineRecommendation, CellarMatch } from '@/utils/types';
 
 export interface PairingOptions {
   sourceMode?: 'all' | 'cellar' | 'store';
   wineType?: string;
-  pairingMode?: 'all' | 'classic' | 'audacious' | 'merchant';
+  pairingMode?: 'all' | 'classic' | 'audacious' | 'heart' | 'merchant';
   apiProvider: 'openai' | 'mistral';
   apiKey: string;
   userId?: string;
@@ -17,7 +17,7 @@ const winePairingService = {
   findPairingsByFood: async (
     foodQuery: string,
     options: PairingOptions
-  ): Promise<FoodPairing[]> => {
+  ): Promise<WineRecommendation[]> => {
     const res = await fetch('/api/pairings/food', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,76 +36,140 @@ const winePairingService = {
     const data = await res.json();
 
     return Array.isArray(data)
-      ? data.map((item, index): FoodPairing => ({
+      ? data.map((item, index): WineRecommendation => ({
           id: `food-${foodQuery}-${index}`,
           food: foodQuery,
-          wine_id: `ia-wine-${index}`, // ✅ string
+          wine_type: item.wine_type || 'Vin recommandé',
+          grape: item.grape || '',
+          characteristics: item.characteristics || '',
+          explanation: item.explanation || 'Pas d\'explication fournie',
+          pairing_type: item.pairing_type || 'classic',
           wine: {
-            id: `ia-wine-${index}`, // ✅ string
-            name: item.wine,
-            color: 'unknown',
-            vintage: 0, // ✅ still number
+            id: `ia-wine-${index}`, 
+            name: item.wine_type || 'Vin recommandé',
+            color: item.wine_type?.toLowerCase().includes('rouge') ? 'rouge' : 
+                 item.wine_type?.toLowerCase().includes('blanc') ? 'blanc' : 
+                 item.wine_type?.toLowerCase().includes('rosé') ? 'rosé' : 'unknown',
+            vintage: 0,
             domain: 'IA générée',
             region: 'inconnu',
             country: 'France',
             appellation: 'N/A',
             alcohol_percentage: 0,
-          },
-          saved: false,
-          user_rating: null,
-          explanation: item.explanation,
-          pairing_type: item.pairing_type || 'classic',
+          }
         }))
       : [];
+  },
+
+  findCellarMatches: async (
+    foodQuery: string,
+    wineRecommendations: WineRecommendation[],
+    options: PairingOptions
+  ): Promise<CellarMatch[]> => {
+    if (!options.userId) {
+      throw new Error('ID utilisateur requis pour cette opération');
+    }
+    
+    console.log("Appel API cellar-match avec:", { 
+      foodQuery, 
+      recommendations: wineRecommendations.length,
+      userId: options.userId 
+    });
+    
+    try {
+      // Vérifier que wineRecommendations contient des données
+      if (!Array.isArray(wineRecommendations) || wineRecommendations.length === 0) {
+        console.warn("Aucune recommandation fournie pour cellar-match");
+        return [];
+      }
+      
+      // Limiter le nombre de recommandations pour alléger la charge
+      const limitedRecommendations = wineRecommendations.slice(0, 6);
+      
+      const res = await fetch('/api/pairings/cellar-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          foodQuery,
+          wineRecommendations: limitedRecommendations,
+          userId: options.userId,
+          apiKey: options.apiKey,
+          apiProvider: options.apiProvider,
+        }),
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Erreur API IA (cellar-match) : ${res.status}`, errorText);
+        throw new Error(`Erreur API IA (cellar-match) : ${res.status}`);
+      }
+
+      const data = await res.json();
+      
+      if (!Array.isArray(data)) {
+        console.warn("La réponse n'est pas un tableau:", data);
+        return [];
+      }
+      
+      return data;
+    } catch (error) {
+      console.error("Erreur détaillée dans findCellarMatches:", error);
+      throw error;
+    }
   },
 
   findPairingsByWine: async (
     wine: string | DBWine,
     options: PairingOptions
   ): Promise<FoodPairing[]> => {
-    const res = await fetch('/api/pairings/wine', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        wine,
-        apiKey: options.apiKey,
-        apiProvider: options.apiProvider,
-        pairingMode: options.pairingMode,
-        wineType: options.wineType,
-      }),
-    });
+    try {      
+      const res = await fetch('/api/pairings/wine', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          wine,
+          apiKey: options.apiKey,
+          apiProvider: options.apiProvider,
+          pairingMode: options.pairingMode,
+          wineType: options.wineType,
+        }),
+      });
 
-    if (!res.ok) {
-      throw new Error(`Erreur API IA (wine) : ${res.status}`);
+      if (!res.ok) {
+        throw new Error(`Erreur API IA (wine) : ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      return Array.isArray(data)
+        ? data.map((item, index): FoodPairing => ({
+            id: `wine-${typeof wine === 'string' ? wine : wine.id}-${index}`,
+            food: item.food || 'Inconnu',
+            wine_id: typeof wine === 'string' ? `manual-${index}` : wine.id,
+            wine:
+              typeof wine === 'string'
+                ? {
+                    id: `manual-${index}`,
+                    name: wine,
+                    color: 'unknown',
+                    vintage: 0,
+                    domain: 'Manuel',
+                    region: 'non précisé',
+                    country: 'France',
+                    appellation: 'N/A',
+                    alcohol_percentage: 0,
+                  }
+                : wine,
+            saved: false,
+            user_rating: null,
+            explanation: item.explanation,
+            pairing_type: item.pairing_type || 'classic',
+          }))
+        : [];
+    } catch (error) {
+      console.error("Erreur dans findPairingsByWine:", error);
+      throw error;
     }
-
-    const data = await res.json();
-
-    return Array.isArray(data)
-      ? data.map((item, index): FoodPairing => ({
-          id: `wine-${typeof wine === 'string' ? wine : wine.id}-${index}`,
-          food: item.food || 'Inconnu',
-          wine_id: typeof wine === 'string' ? `manual-${index}` : wine.id,
-          wine:
-            typeof wine === 'string'
-              ? {
-                  id: `manual-${index}`,
-                  name: wine,
-                  color: 'unknown',
-                  vintage: 0,
-                  domain: 'Manuel',
-                  region: 'non précisé',
-                  country: 'France',
-                  appellation: 'N/A',
-                  alcohol_percentage: 0,
-                }
-              : wine,
-          saved: false,
-          user_rating: null,
-          explanation: item.explanation,
-          pairing_type: item.pairing_type || 'classic',
-        }))
-      : [];
   },
 
   savePairing: async (
