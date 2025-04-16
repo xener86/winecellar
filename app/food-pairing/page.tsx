@@ -16,7 +16,6 @@ import {
   useTheme,
 } from '@mui/material';
 
-import SearchIcon from '@mui/icons-material/Search';
 import RestaurantMenuIcon from '@mui/icons-material/RestaurantMenu';
 import WineBarIcon from '@mui/icons-material/WineBar';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
@@ -26,7 +25,6 @@ import { User } from '@supabase/supabase-js';
 import { supabase } from '@/utils/supabase';
 
 import Navbar from '@/components/Navbar';
-import FoodSearchTab from '@/components/tabs/FoodSearchTab';
 import TwoStepPairingTab from '@/components/tabs/TwoStepPairingTab';
 import WinePairingService from '@/services/WinePairingService';
 
@@ -57,11 +55,13 @@ export default function FoodPairingPage() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [cellarWines, setCellarWines] = useState<Bottle[]>([]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pairingMode, setPairingMode] = useState<PairingMode>('all');
   const [pairingFilter, setPairingFilter] = useState<PairingMode>('all');
   const [sourceMode, setSourceMode] = useState<SourceMode>('all');
   const [savedPairings, setSavedPairings] = useState<FoodPairing[]>([]);
   const [pairingResults, setPairingResults] = useState<FoodPairing[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [pairingLoading, setPairingLoading] = useState(false);
 
   // États pour la nouvelle méthode en deux étapes
@@ -77,6 +77,7 @@ export default function FoodPairingPage() {
     severity: 'success' as 'success' | 'error' | 'info',
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const filteredResults = pairingResults.filter((p) =>
     pairingFilter === 'all' ? true : p.pairing_type === pairingFilter
   );
@@ -144,6 +145,7 @@ export default function FoodPairingPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSearchByFood = async () => {
     if (!foodQuery.trim()) return;
     
@@ -228,6 +230,7 @@ export default function FoodPairingPage() {
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleLoadMoreResults = () => {
     // Implémentation future pour charger plus de résultats
     console.log("Charger plus de résultats");
@@ -329,41 +332,18 @@ export default function FoodPairingPage() {
             overflow: 'hidden',
           }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-              <Tabs value={tabIndex} onChange={(_, idx) => setTabIndex(idx)} variant="fullWidth">
-                <Tab icon={<SearchIcon />} label="Méthode simple" />
-                <Tab icon={<RestaurantMenuIcon />} label="Méthode avancée" />
-                <Tab icon={<WineBarIcon />} label="Par vin" />
-                <Tab icon={
-                  <Badge badgeContent={savedPairings.length} color="primary">
-                    <BookmarkIcon />
-                  </Badge>
-                } label="Favoris" />
-              </Tabs>
+            <Tabs value={tabIndex} onChange={(_, idx) => setTabIndex(idx)} variant="fullWidth">
+  <Tab icon={<RestaurantMenuIcon />} label="Accords mets-vins" />
+  <Tab icon={<WineBarIcon />} label="Par vin" />
+  <Tab icon={
+    <Badge badgeContent={savedPairings.length} color="primary">
+      <BookmarkIcon />
+    </Badge>
+  } label="Favoris" />
+</Tabs>
             </Box>
             <Box sx={{ p: { xs: 2, md: 6 } }}>
               {tabIndex === 0 && (
-                <FoodSearchTab
-                  foodQuery={foodQuery}
-                  setFoodQuery={setFoodQuery}
-                  selectedWineType={selectedWineType}
-                  setSelectedWineType={setSelectedWineType}
-                  sourceMode={sourceMode}
-                  setSourceMode={setSourceMode}
-                  pairingMode={pairingMode}
-                  setPairingMode={setPairingMode}
-                  apiKeys={apiKeys}
-                  apiProvider={apiProvider}
-                  pairingLoading={pairingLoading}
-                  handleSearchByFood={handleSearchByFood}
-                  filteredResults={filteredResults}
-                  handleLoadMoreResults={handleLoadMoreResults}
-                  handleSavePairing={handleSavePairing}
-                  handleRemovePairing={handleRemovePairing}
-                  handleRatePairing={handleRatePairing}
-                  userId={userData?.id}
-                />
-              )}
-              {tabIndex === 1 && (
                 <TwoStepPairingTab
                   foodQuery={foodQuery}
                   setFoodQuery={setFoodQuery}
