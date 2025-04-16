@@ -3,11 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 
 export async function POST(req: NextRequest) {
+  
   try {
+    console.log("[API] Début de la requête food");
     const body = await req.json();
+    console.log("[API] Corps de la requête:", body);
+    
     const { foodQuery, apiKey, apiProvider = 'openai' } = body;
 
     if (!apiKey || !foodQuery) {
+      console.log("[API] Données manquantes:", { hasApiKey: !!apiKey, hasFoodQuery: !!foodQuery });
       return NextResponse.json({ error: 'Données manquantes' }, { status: 400 });
     }
 
@@ -65,7 +70,7 @@ Réponds au format JSON :
     } else {
       const openai = new OpenAI({ apiKey });
       const completion = await openai.chat.completions.create({
-        model: 'gpt-3.5 turbo',
+        model: 'gpt-3.5-turbo-0125',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.7,
       });
@@ -77,6 +82,8 @@ Réponds au format JSON :
     return NextResponse.json(parsed);
   } catch (err: unknown) {
     console.error('[AI_ROUTE_ERROR]', err);
+
+
     return NextResponse.json({ error: 'Erreur serveur IA' }, { status: 500 });
   }
 }
