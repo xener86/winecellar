@@ -1,0 +1,13 @@
+{
+    "functions": {
+      "app/api/pairings/food/route.ts": {
+        "maxDuration": 60
+      },
+      "app/api/pairings/wine/route.ts": {
+        "maxDuration": 60
+      },
+      "app/api/pairings/cellar-match/route.ts": {
+        "maxDuration": 60
+      }
+    }
+  }
