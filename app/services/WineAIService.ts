@@ -521,7 +521,7 @@ class WineAIService {
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: "gpt-3.5-turbo", // Ou un modèle plus récent/adapté
+            model: "gpt-4.1-nano", // Ou un modèle plus récent/adapté
             messages: [
               { role: "system", content: "Tu es un sommelier expert. Fournis des informations précises et structurées au format JSON uniquement." },
               { role: "user", content: prompt }

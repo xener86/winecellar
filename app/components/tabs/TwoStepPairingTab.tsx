@@ -38,7 +38,6 @@ interface TwoStepPairingTabProps {
   pairingMode: PairingMode;
   sourceMode: SourceMode;
   apiKeys: { openai: string; mistral: string };
-  apiProvider: 'openai' | 'mistral';
   userId?: string;
 
   handleSearchByFood: () => void;
@@ -62,7 +61,6 @@ export default function TwoStepPairingTab({
   selectedWineType,
   setSelectedWineType,
   apiKeys,
-  apiProvider,
   userId,
   handleSearchByFood,
   findCellarMatches,
@@ -86,8 +84,11 @@ export default function TwoStepPairingTab({
     }
   };
 
-  const currentApiKey = apiKeys[apiProvider];
+  // Force l'utilisation d'OpenAI comme fournisseur IA
+  const currentApiKey = apiKeys['openai'];
   const apiConfigured = !!currentApiKey;
+
+  console.log('[IA] Fournisseur forcé : openai');
 
   return (
     <Box>
