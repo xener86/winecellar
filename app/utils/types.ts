@@ -1,3 +1,6 @@
+// app/utils/types.ts
+// Fichier existant avec ajout des types pour le gestionnaire de bouteilles
+
 // ---------------------------------------------
 // Domaine : Vins
 // ---------------------------------------------
@@ -48,6 +51,7 @@ export interface Bottle {
   quantity?: number;
   wine?: Wine;
   position?: Position;
+  crate_id?: string | null; // Ajout pour le gestionnaire de bouteilles
 }
 
 export interface BottleMatch {
@@ -57,11 +61,6 @@ export interface BottleMatch {
   match_quality: 'perfect' | 'good' | 'alternative';
   explanation: string;
 }
-
-// Exemple d'extension locale dans un composant si besoin
-// export interface EnhancedBottleMatch extends Omit<BottleMatch, 'wine'> {
-//   wine?: DBWine;
-// }
 
 // ---------------------------------------------
 // Domaine : Emplacements / Caves
@@ -185,4 +184,45 @@ export interface Notification {
   open: boolean;
   message: string;
   severity: 'success' | 'error' | 'info' | 'warning';
+}
+
+// ---------------------------------------------
+// Domaine : Gestionnaire de bouteilles
+// ---------------------------------------------
+
+// Interface pour les données de vin utilisées dans le gestionnaire de bouteilles
+export interface WineData {
+  name: string;
+  vintage: number | null;
+  region: string;
+  appellation: string;
+  domain: string;
+  color: string;
+  alcohol_percentage: number | null;
+  grapes: string[];
+  notes: string;
+}
+
+// Interface pour les informations de couleur du vin
+export interface WineColorInfo {
+  label: string;
+  bgColor: string;
+  textColor: string;
+}
+
+// Props communes pour les composants d'onglets du gestionnaire de bouteilles
+export interface CommonTabProps {
+  position: Position | null;
+  apiKey?: string;
+  onSuccess: () => void;
+  showNotification: (message: string, severity: 'success' | 'error' | 'info' | 'warning') => void;
+}
+
+// Props pour le composant principal du gestionnaire de bouteilles
+export interface BottleManagerProps {
+  open: boolean;
+  onClose: () => void;
+  position: Position | null;
+  onBottleAdded: () => void;
+  apiKey?: string;
 }

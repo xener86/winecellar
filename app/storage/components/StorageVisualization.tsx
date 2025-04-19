@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Paper,
@@ -15,7 +15,7 @@ import {
   Position,
   StorageLocation,
   WineAgingInfo
-} from '@types';
+} from '@/utils/types';
 
 import SearchAndFiltersBar from './SearchAndFiltersBar';
 import LegendDisplay from './LegendDisplay';
@@ -35,6 +35,7 @@ interface Props {
   onPositionClick: (position: Position) => void;
   hoveredPositionInfo: { row: number; col: number } | null;
   onPositionHover: (info: { row: number; col: number } | null) => void;
+  fetchBottles?: () => void; // Ajout d'une prop pour rafraîchir les bouteilles
 }
 
 const StorageVisualization: React.FC<Props> = ({
@@ -47,7 +48,8 @@ const StorageVisualization: React.FC<Props> = ({
   displayMode,
   onPositionClick,
   hoveredPositionInfo,
-  onPositionHover
+  onPositionHover,
+  fetchBottles
 }) => {
   const theme = useTheme();
   const cellSize = 60;
@@ -143,6 +145,15 @@ const StorageVisualization: React.FC<Props> = ({
     };
   };
 
+  // Fonction explicitement définie pour gérer l'ajout d'une bouteille
+  const handleBottleAdded = useCallback(() => {
+    console.log("Bouteille ajoutée avec succès - handleBottleAdded dans StorageVisualization");
+    // Rafraîchir les bouteilles si la fonction est disponible
+    if (typeof fetchBottles === 'function') {
+      fetchBottles();
+    }
+  }, [fetchBottles]);
+
   const renderGrid = () => {
     if (!selectedLocation?.row_count || !selectedLocation?.column_count) return null;
 
@@ -237,7 +248,7 @@ const StorageVisualization: React.FC<Props> = ({
             open={showQuickAdd}
             onClose={() => setShowQuickAdd(false)}
             selectedPosition={selectedPosition}
-            recentBottles={[]} // À implémenter si besoin
+            onBottleAdded={handleBottleAdded}
           />
         </>
       )}
