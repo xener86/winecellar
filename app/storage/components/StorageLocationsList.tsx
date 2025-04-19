@@ -8,7 +8,7 @@ import { alpha, useTheme } from '@mui/material/styles';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import Link from 'next/link';
-import { StorageLocation } from '../types';
+import { StorageLocation } from '@types';
 
 interface StorageLocationsListProps {
   locations: StorageLocation[];

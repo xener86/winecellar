@@ -13,6 +13,16 @@ export interface PairingOptions {
   forceRefresh?: boolean;
 }
 
+// Interface pour les données de l'API
+interface ApiWineResponse {
+  wine_type?: string;
+  grape?: string;
+  characteristics?: string;
+  explanation?: string;
+  pairing_type?: 'classic' | 'audacious' | 'heart';
+  food?: string;
+}
+
 const winePairingService = {
   findPairingsByFood: async (
     foodQuery: string,
@@ -36,27 +46,13 @@ const winePairingService = {
     const data = await res.json();
 
     return Array.isArray(data)
-      ? data.map((item, index): WineRecommendation => ({
-          id: `food-${foodQuery}-${index}`,
-          food: foodQuery,
+      ? data.map((item: ApiWineResponse): WineRecommendation => ({
           wine_type: item.wine_type || 'Vin recommandé',
           grape: item.grape || '',
           characteristics: item.characteristics || '',
           explanation: item.explanation || 'Pas d\'explication fournie',
           pairing_type: item.pairing_type || 'classic',
-          wine: {
-            id: `ia-wine-${index}`, 
-            name: item.wine_type || 'Vin recommandé',
-            color: item.wine_type?.toLowerCase().includes('rouge') ? 'rouge' : 
-                 item.wine_type?.toLowerCase().includes('blanc') ? 'blanc' : 
-                 item.wine_type?.toLowerCase().includes('rosé') ? 'rosé' : 'unknown',
-            vintage: 0,
-            domain: 'IA générée',
-            region: 'inconnu',
-            country: 'France',
-            appellation: 'N/A',
-            alcohol_percentage: 0,
-          }
+          food: foodQuery
         }))
       : [];
   },
@@ -142,29 +138,32 @@ const winePairingService = {
       const data = await res.json();
 
       return Array.isArray(data)
-        ? data.map((item, index): FoodPairing => ({
-            id: `wine-${typeof wine === 'string' ? wine : wine.id}-${index}`,
-            food: item.food || 'Inconnu',
-            wine_id: typeof wine === 'string' ? `manual-${index}` : wine.id,
-            wine:
-              typeof wine === 'string'
-                ? {
-                    id: `manual-${index}`,
-                    name: wine,
-                    color: 'unknown',
-                    vintage: 0,
-                    domain: 'Manuel',
-                    region: 'non précisé',
-                    country: 'France',
-                    appellation: 'N/A',
-                    alcohol_percentage: 0,
-                  }
-                : wine,
-            saved: false,
-            user_rating: null,
-            explanation: item.explanation,
-            pairing_type: item.pairing_type || 'classic',
-          }))
+        ? data.map((item, index): FoodPairing => {
+            // Créer un objet DBWine valide
+            const wineObject: DBWine = typeof wine === 'string'
+              ? {
+                  id: `manual-${index}`,
+                  name: wine,
+                  color: 'unknown',
+                  vintage: 0,
+                  domain: 'Manuel',
+                  region: 'non précisé',
+                  country: 'France',
+                  appellation: 'N/A'
+                }
+              : wine;
+
+            return {
+              id: `wine-${typeof wine === 'string' ? wine : wine.id}-${index}`,
+              food: item.food || 'Inconnu',
+              wine_id: typeof wine === 'string' ? `manual-${index}` : wine.id,
+              wine: wineObject,
+              saved: false,
+              rating: 0,
+              explanation: item.explanation,
+              pairing_type: item.pairing_type || 'classic',
+            };
+          })
         : [];
     } catch (error) {
       console.error("Erreur dans findPairingsByWine:", error);

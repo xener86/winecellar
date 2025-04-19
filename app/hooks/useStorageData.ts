@@ -2,7 +2,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../utils/supabase';
-import { StorageLocation, Position, Bottle, FilterOptions } from '../storage/types';
+import { StorageLocation, Position, Bottle, FilterOptions } from '@/utils/types';
 import { useNotifications } from '../hooks/useNotifications';
 
 export const useStorageData = () => {

@@ -171,7 +171,7 @@ export default function FoodSearchTab({
               const isPairingSaved = pairing.saved || false;
               
               // Obtenir la note de l'utilisateur si disponible
-              const userRating = pairing.user_rating || 0;
+              const userRating = pairing.rating || 0;
               
               return (
                 <Grid component="div" sx={{ width: { xs: '100%', sm: '50%', md: '33.33%' } }} key={index}>
@@ -179,7 +179,7 @@ export default function FoodSearchTab({
                     wine={wine}
                     food={pairing.food}
                     mode="byFood"
-                    apiConfig={{ apiProvider, apiKey: currentApiKey }}
+                    apiConfig={{ apiProvider: apiProvider as string, apiKey: currentApiKey }}
                     userId={userId}
                     onSave={handleSavePairing}
                     onRemove={handleRemovePairing}

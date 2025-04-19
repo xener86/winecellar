@@ -22,7 +22,7 @@ import WineBarIcon from '@mui/icons-material/WineBar';
 import SearchIcon from '@mui/icons-material/Search';
 
 import WinePairingSuggestions from '../WinePairingSuggestions';
-import { PairingMode, FoodPairing, ApiKeys, WineObject } from '@/utils/types';
+import { PairingMode, FoodPairing, ApiKeys, DBWine } from '@/utils/types';
 
 interface SavedPairingsTabProps {
   savedPairings: FoodPairing[];
@@ -166,7 +166,7 @@ const SavedPairingsTab: React.FC<SavedPairingsTabProps> = ({
                   sx={{ width: { xs: '100%', md: '50%' } }}
                 >
                   <WinePairingSuggestions
-                    wine={pairing.wine as WineObject}
+                    wine={pairing.wine as DBWine}
                     food={pairing.food}
                     pairings={[pairing]} 
                     mode={pairing.wine_id ? 'byFood' : 'byWine'}
@@ -180,7 +180,7 @@ const SavedPairingsTab: React.FC<SavedPairingsTabProps> = ({
                     onRemove={handleRemovePairing}
                     onRate={handleRatePairing}
                     saved
-                    userRating={pairing.user_rating ?? undefined}
+                    userRating={pairing.rating ?? undefined}
                   />
                 </Grid>
               ))}

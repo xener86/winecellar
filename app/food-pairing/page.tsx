@@ -35,8 +35,22 @@ import {
   SourceMode,
   ApiKeys,
   WineRecommendation,
-  CellarMatch
+  CellarMatch,
+  DBWine
 } from '@/utils/types';
+
+// Interface pour les résultats de l'API
+interface ApiPairingResult {
+  wine_type?: string;
+  pairing_type?: 'classic' | 'audacious' | 'heart';
+  grape?: string;
+  characteristics?: string;
+  explanation?: string;
+  food?: string;
+  wine?: DBWine;
+}
+
+// Les props du TwoStepPairingTab sont définies dans le composant lui-même
 
 export default function FoodPairingPage() {
   const theme = useTheme();
@@ -100,12 +114,20 @@ export default function FoodPairingPage() {
         .eq('status', 'in_stock')
         .eq('user_id', authData.user.id);
 
-      const processedBottles = bottlesData?.map(b => ({
-        ...b,
-        wine: Array.isArray(b.wine) ? b.wine[0] : b.wine
-      })) || [];
+      if (bottlesData) {
+        const processedBottles: Bottle[] = bottlesData.map(b => ({
+          id: b.id,
+          wine_id: b.wine_id,
+          position_id: b.position_id,
+          status: b.status,
+          wine: Array.isArray(b.wine) ? b.wine[0] : b.wine,
+          acquisition_date: null,
+          consumption_date: null,
+          tasting_note: null
+        }));
 
-      setCellarWines(processedBottles);
+        setCellarWines(processedBottles);
+      }
 
       const { data: saved } = await supabase
         .from('food_pairing')
@@ -158,7 +180,19 @@ export default function FoodPairingPage() {
         sourceMode,
         userId: userData?.id
       });
-      setPairingResults(results);
+
+      // Convertir les résultats au format FoodPairing
+      const convertedResults: FoodPairing[] = results.map((result: ApiPairingResult) => ({
+        food: foodQuery,
+        wine_id: undefined,
+        pairing_type: result.pairing_type || 'classic',
+        wine: result.wine || { id: '', name: result.wine_type || 'Vin recommandé' },
+        saved: false,
+        rating: 0,
+        explanation: result.explanation
+      }));
+      
+      setPairingResults(convertedResults);
     } catch (error) {
       console.error("Erreur lors de la recherche d'accords:", error);
       setNotification({
@@ -186,7 +220,16 @@ export default function FoodPairingPage() {
         pairingMode,
       });
       
-      setWineRecommendations(recommendations);
+      // Conversion du résultat en WineRecommendation[]
+      const processedRecommendations: WineRecommendation[] = recommendations.map((rec: ApiPairingResult) => ({
+        wine_type: rec.wine_type || '',
+        pairing_type: rec.pairing_type || 'classic',
+        grape: rec.grape,
+        characteristics: rec.characteristics,
+        explanation: rec.explanation
+      }));
+      
+      setWineRecommendations(processedRecommendations);
     } catch (error) {
       console.error("Erreur lors de la recherche de recommandations:", error);
       setNotification({
@@ -352,7 +395,6 @@ export default function FoodPairingPage() {
                   sourceMode={sourceMode}
                   pairingMode={pairingMode}
                   apiKeys={apiKeys}
-                  apiProvider={apiProvider}
                   userId={userData?.id}
                   handleSearchByFood={handleGetWineRecommendations}
                   findCellarMatches={handleFindCellarMatches}

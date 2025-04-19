@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OpenAI } from 'openai';
 import { supabase } from '@/utils/supabase';
-
+import { WineRecommendation } from '@/utils/types';
 export async function POST(req: NextRequest) {
   console.log("API cellar-match appelée !");
   try {
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 Tu es un expert en vins qui doit faire correspondre des suggestions génériques avec des bouteilles spécifiques dans une cave.
 
 Pour le plat : "${foodQuery}", on m'a recommandé les types de vins suivants :
-${JSON.stringify(wineRecommendations.map(r => ({
+${JSON.stringify(wineRecommendations.map((r: WineRecommendation) => ({
   wine_type: r.wine_type,
   grape: r.grape,
   characteristics: r.characteristics,

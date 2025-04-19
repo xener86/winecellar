@@ -8,7 +8,7 @@ import {
 import { useTheme, alpha } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
-import { Bottle } from '../../types';
+import { Bottle } from '@types';
 
 interface AperitifSuggestionsDialogProps {
   open: boolean;

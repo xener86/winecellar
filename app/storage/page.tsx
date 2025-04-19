@@ -26,7 +26,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { Breadcrumbs, Link } from '../components/ui/Navigation';
 
 // Types
-import { Position, Bottle, StorageLocation } from './types';
+import { Position, Bottle, StorageLocation } from '@types';
 
 // Composant pour afficher un message quand aucun emplacement n'existe
 const EmptyLocationView = () => {
@@ -378,19 +378,20 @@ export default function StorageManagement() {
     
     {/* Visualisation de l'emplacement - Colonne de droite */}
     <Box sx={{ width: '75%' }}>
-      <StorageVisualization 
-        selectedLocation={selectedLocation}
-        positions={positions}
-        bottles={bottles}
-        loading={positionLoading}
-        currentTab={currentTab}
-        onTabChange={handleChangeTab}
-        displayMode={displayMode}
-        onPositionClick={handlePositionClick}
-        hoveredPositionInfo={hoveredPositionInfo}
-        onPositionHover={setHoveredPositionInfo}
-      />
-    </Box>
+        <StorageVisualization 
+          selectedLocation={selectedLocation}
+          positions={positions}
+          bottles={bottles}
+          loading={positionLoading}
+          currentTab={currentTab}
+          onTabChange={handleChangeTab}
+          displayMode={displayMode}
+          onDisplayModeChange={handleDisplayModeChange}
+          onPositionClick={handlePositionClick}
+          hoveredPositionInfo={hoveredPositionInfo}
+          onPositionHover={setHoveredPositionInfo}
+        />
+      </Box>
   </Box>
 )}
 

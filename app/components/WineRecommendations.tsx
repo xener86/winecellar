@@ -19,7 +19,8 @@ interface WineRecommendationsProps {
   loading?: boolean;
 }
 
-const getPairingTypeColor = (type: string): "primary" | "secondary" | "error" | "default" => {
+const getPairingTypeColor = (type: string | undefined): "primary" | "secondary" | "error" | "default" => {
+  if (!type) return 'default';
   switch (type) {
     case 'classic': return 'primary';
     case 'audacious': return 'secondary';
@@ -28,7 +29,8 @@ const getPairingTypeColor = (type: string): "primary" | "secondary" | "error" | 
   }
 };
 
-const getPairingTypeLabel = (type: string): string => {
+const getPairingTypeLabel = (type: string | undefined): string => {
+  if (!type) return 'Non catégorisé';
   switch (type) {
     case 'classic': return 'Classique';
     case 'audacious': return 'Audacieux';
@@ -49,9 +51,10 @@ export default function WineRecommendations({
 
   // Grouper les recommandations par type
   const groupedRecommendations = recommendations.reduce((groups, rec) => {
-    const group = groups[rec.pairing_type] || [];
+    const pairingType = rec.pairing_type || 'default';
+    const group = groups[pairingType] || [];
     group.push(rec);
-    groups[rec.pairing_type] = group;
+    groups[pairingType] = group;
     return groups;
   }, {} as Record<string, WineRecommendation[]>);
 
@@ -103,12 +106,12 @@ export default function WineRecommendations({
                       <strong>Cépage :</strong> {rec.grape || 'Non spécifié'}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Caractéristiques :</strong> {rec.characteristics}
+                      <strong>Caractéristiques :</strong> {rec.characteristics || 'Non spécifiées'}
                     </Typography>
                   </Box>
                   
                   <Typography variant="body1">
-                    {rec.explanation}
+                    {rec.explanation || 'Pas d\'explication disponible.'}
                   </Typography>
                 </Paper>
               </Grid>
@@ -118,4 +121,4 @@ export default function WineRecommendations({
       ))}
     </Box>
   );
-}
+} 

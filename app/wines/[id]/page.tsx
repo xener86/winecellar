@@ -419,11 +419,19 @@ export default function WineDetail() {
                 Caractéristiques principales basées sur les notes de dégustation
               </div>
               <TastingRadarChart 
-                wine={wine} 
-                height={200} 
-                showTitle={false} // Titre déjà fourni par le parent
-                showFootnote={true}
-              />
+  wine={{
+    color: wine.color,
+    notes: wine.notes,
+    tasting_notes: wine.tasting_notes ? {
+      appearance: wine.tasting_notes.appearance || undefined,
+      nose: wine.tasting_notes.nose || undefined,
+      palate: wine.tasting_notes.palate || undefined
+    } : undefined
+  }} 
+  height={200} 
+  showTitle={false} 
+  showFootnote={true}
+/>
             </div>
               
 

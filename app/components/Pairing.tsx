@@ -17,7 +17,7 @@ import BookmarkIcon from '@mui/icons-material/Bookmark';
 import StarBorderIcon from '@mui/icons-material/StarBorder';
 import StarIcon from '@mui/icons-material/Star';
 
-import { FoodPairing, DBWine, ApiKeys } from '@/utils/types';
+import { FoodPairing, DBWine } from '@/utils/types';
 
 export interface PairingProps {
   wine: DBWine | null | undefined;
@@ -25,8 +25,8 @@ export interface PairingProps {
   mode: 'byFood' | 'byWine';
   compact?: boolean;
   apiConfig: {
-    apiProvider: keyof ApiKeys; // ✅ "openai" | "mistral"
-    apiKey: string;             // ✅ une seule clé, pas l'objet complet
+    apiProvider: string; // "openai" | "mistral"
+    apiKey: string;
   };
   userId?: string;
   onSave?: (pairing: FoodPairing) => void;
@@ -90,7 +90,8 @@ const Pairing: React.FC<PairingProps> = ({
         wine,
         food,
         saved: true,
-        user_id: userId,
+        rating: 0,
+        pairing_type: 'classic'
       };
       onSave(pairing);
     }

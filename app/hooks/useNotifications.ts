@@ -1,6 +1,6 @@
 // File: app/hooks/useNotifications.ts
 import { useState, useCallback } from 'react';
-import { Notification } from '../storage/types';
+import { Notification } from '@types';
 
 export const useNotifications = () => {
   const [notification, setNotification] = useState<Notification>({

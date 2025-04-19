@@ -81,17 +81,15 @@ const StorageHeader: React.FC<StorageHeaderProps> = ({
             label="Filtrer"
           />
           
-          <ActionButton 
+          <ActionButtonLink 
             icon={<InventoryIcon />} 
-            component={Link}
             href="/storage/stock"
             color="info"
             label="Stock"
           />
           
-          <ActionButton 
+          <ActionButtonLink 
             icon={<QrCodeIcon />} 
-            component={Link}
             href="/generate-qr"
             color="info"
             label="QR Codes"
@@ -104,9 +102,8 @@ const StorageHeader: React.FC<StorageHeaderProps> = ({
             label="Apéritif"
           />
           
-          <ActionButton 
+          <ActionButtonLink 
             icon={<PieChartIcon />} 
-            component={Link}
             href="/insights"
             color="info"
             label="Analyses"
@@ -237,20 +234,16 @@ const StorageHeader: React.FC<StorageHeaderProps> = ({
   );
 };
 
-// Composant de bouton d'action réutilisable
+// Composant de bouton d'action pour les clics
 const ActionButton = ({ 
   icon, 
   onClick, 
   label, 
-  component, 
-  href, 
   color = 'default'
 }: { 
   icon: React.ReactNode, 
   onClick?: () => void, 
-  label: string, 
-  component?: React.ElementType;
-  href?: string, 
+  label: string,
   color?: 'default' | 'primary' | 'secondary' | 'info' | 'warning' | 'error' | 'success'
 }) => {
   const colorVariant = color === 'default' ? undefined : color;
@@ -261,7 +254,48 @@ const ActionButton = ({
       color={colorVariant}
       startIcon={icon}
       onClick={onClick}
-      component={component}
+      sx={{ 
+        borderRadius: 2,
+        minWidth: { xs: '40px', sm: '40px', md: 'auto' },
+        // Masquer le texte sur petits écrans
+        '& .MuiButton-startIcon': {
+          mr: { xs: 0, md: 0.5 }
+        },
+        px: { xs: 1, md: 2 },
+        borderWidth: '1.5px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+        transition: 'all 0.2s ease',
+        '&:hover': {
+          boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+          transform: 'translateY(-1px)'
+        }
+      }}
+    >
+      <Box sx={{ display: { xs: 'none', md: 'block' } }}>{label}</Box>
+    </Button>
+  );
+};
+
+// Composant de bouton d'action pour les liens
+const ActionButtonLink = ({ 
+  icon, 
+  href,
+  label, 
+  color = 'default'
+}: { 
+  icon: React.ReactNode, 
+  href: string,
+  label: string, 
+  color?: 'default' | 'primary' | 'secondary' | 'info' | 'warning' | 'error' | 'success'
+}) => {
+  const colorVariant = color === 'default' ? undefined : color;
+  
+  return (
+    <Button 
+      variant="outlined" 
+      color={colorVariant}
+      startIcon={icon}
+      component={Link}
       href={href}
       sx={{ 
         borderRadius: 2,

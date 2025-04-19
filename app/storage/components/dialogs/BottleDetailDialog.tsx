@@ -12,7 +12,7 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import CloseIcon from '@mui/icons-material/Close';
 import Link from 'next/link';
-import { Bottle } from '../../types';
+import { Bottle } from '@types';
 
 interface BottleDetailDialogProps {
   open: boolean;

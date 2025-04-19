@@ -4,7 +4,7 @@ import {
   Typography, Box, Button, TextField
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
-import { Bottle } from '../../types';
+import { Bottle } from '@types';
 
 interface ConsumeBottleDialogProps {
   open: boolean;

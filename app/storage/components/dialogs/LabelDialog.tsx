@@ -9,7 +9,7 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
-import { Bottle } from '../../types';
+import { Bottle } from '@types';
 
 // Étiquettes personnalisées
 const customLabels = [

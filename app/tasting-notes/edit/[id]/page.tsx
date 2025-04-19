@@ -10,14 +10,41 @@ import Navbar from '../../../components/Navbar';
 import TastingForm from '../../../components/TastingForm';
 import { supabase } from '../../../utils/supabase';
 
+// Type pour les données de dégustation génériques
+type GenericRecord = Record<string, string | number | boolean | null | undefined>;
+
+// Interface pour les données du formulaire
+interface TastingFormData extends GenericRecord {
+  wine_name?: string;
+  vintage?: number;
+  appellation?: string;
+  region?: string;
+  country?: string;
+  color?: string;
+  rating?: number;
+  appearance_notes?: string;
+  nose_notes?: string;
+  palate_notes?: string;
+  conclusion?: string;
+  tasting_date?: string;
+}
+
+// Interface pour les données de dégustation
+interface TastingNote extends TastingFormData {
+  id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function EditTastingPage() {
   const params = useParams();
   const router = useRouter();
   const { id } = params;
   
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [tastingData, setTastingData] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [tastingData, setTastingData] = useState<GenericRecord | null>(null);
   
   useEffect(() => {
     const fetchTastingData = async () => {
@@ -45,9 +72,9 @@ export default function EditTastingPage() {
         }
         
         setTastingData(data);
-      } catch (error) {
-        console.error('Erreur lors du chargement de la dégustation:', error);
-        setError(error.message);
+      } catch (err: unknown) {
+        console.error('Erreur lors du chargement de la dégustation:', err);
+        setError(err instanceof Error ? err.message : 'Une erreur inconnue est survenue');
       } finally {
         setLoading(false);
       }
@@ -56,7 +83,7 @@ export default function EditTastingPage() {
     fetchTastingData();
   }, [id, router]);
   
-  const handleSubmit = async (formData) => {
+  const handleSubmit = async (formData: GenericRecord) => {
     try {
       setLoading(true);
       
@@ -73,9 +100,9 @@ export default function EditTastingPage() {
       if (error) throw error;
       
       router.push(`/tasting-notes/${id}`);
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour de la dégustation:', error);
-      setError(error.message);
+    } catch (err: unknown) {
+      console.error('Erreur lors de la mise à jour de la dégustation:', err);
+      setError(err instanceof Error ? err.message : 'Une erreur inconnue est survenue');
       setLoading(false);
     }
   };
@@ -142,6 +169,7 @@ export default function EditTastingPage() {
         >
           {tastingData && (
             <TastingForm 
+              // @ts-expect-error - TastingForm est défini en JSX sans types TypeScript
               initialData={tastingData}
               onSubmit={handleSubmit}
               onCancel={() => router.back()}
