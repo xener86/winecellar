@@ -580,7 +580,7 @@ class WineAIService {
           'Accept': 'application/json'
         },
         body: JSON.stringify({
-          model: "mistral-medium-latest", // Ou un autre modèle Mistral
+          model: "mistral-small-latest", // Ou un autre modèle Mistral
           messages: [
              { role: "system", content: "Tu es un sommelier expert. Fournis des informations précises et structurées au format JSON uniquement." },
              { role: "user", content: prompt }

@@ -7,7 +7,7 @@ import {
   Tabs,
   Tab,
   CircularProgress,
-  useTheme
+  useTheme,
 } from '@mui/material';
 
 import {
@@ -17,7 +17,6 @@ import {
   WineAgingInfo
 } from '@/utils/types';
 
-import SearchAndFiltersBar from './SearchAndFiltersBar';
 import LegendDisplay from './LegendDisplay';
 import StatisticsPanel from './StatisticsPanel';
 import QuickAddDialog from './QuickAddDialog';
@@ -35,7 +34,7 @@ interface Props {
   onPositionClick: (position: Position) => void;
   hoveredPositionInfo: { row: number; col: number } | null;
   onPositionHover: (info: { row: number; col: number } | null) => void;
-  fetchBottles?: () => void; // Ajout d'une prop pour rafraîchir les bouteilles
+  fetchBottles?: () => void;
 }
 
 const StorageVisualization: React.FC<Props> = ({
@@ -46,6 +45,7 @@ const StorageVisualization: React.FC<Props> = ({
   currentTab,
   onTabChange,
   displayMode,
+  onDisplayModeChange,
   onPositionClick,
   hoveredPositionInfo,
   onPositionHover,
@@ -54,8 +54,6 @@ const StorageVisualization: React.FC<Props> = ({
   const theme = useTheme();
   const cellSize = 60;
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [filteredBottles, setFilteredBottles] = useState<Bottle[]>([]);
@@ -98,26 +96,18 @@ const StorageVisualization: React.FC<Props> = ({
   }, [bottles]);
 
   useEffect(() => {
-    const lower = searchTerm.toLowerCase();
-    const result = bottles.filter((bottle) => {
-      const matchSearch = bottle.wine?.name.toLowerCase().includes(lower);
-      const matchFilter =
-        activeFilters.length === 0 ||
-        activeFilters.includes(bottle.wine?.color || '') ||
-        activeFilters.includes(bottle.label || '');
-      return matchSearch && matchFilter;
-    });
+    // Filtrer les bouteilles en fonction du mode d'affichage
+    setFilteredBottles(bottles);
+  }, [bottles, displayMode]);
 
-    setFilteredBottles(result);
-  }, [searchTerm, activeFilters, bottles]);
-
-  const toggleFilter = (filter: string) => {
-    setActiveFilters((prev) =>
-      prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]
-    );
-  };
-
-  const isFilterActive = (filter: string) => activeFilters.includes(filter);
+  // Fonction explicitement définie pour gérer l'ajout d'une bouteille
+  const handleBottleAdded = useCallback(() => {
+    console.log("Bouteille ajoutée avec succès - handleBottleAdded dans StorageVisualization");
+    // Rafraîchir les bouteilles si la fonction est disponible
+    if (typeof fetchBottles === 'function') {
+      fetchBottles();
+    }
+  }, [fetchBottles]);
 
   const getBottleAtPosition = (positionId: string): Bottle | null =>
     bottles.find((b) => b.position_id === positionId) || null;
@@ -144,15 +134,6 @@ const StorageVisualization: React.FC<Props> = ({
       alignItems: 'center',
     };
   };
-
-  // Fonction explicitement définie pour gérer l'ajout d'une bouteille
-  const handleBottleAdded = useCallback(() => {
-    console.log("Bouteille ajoutée avec succès - handleBottleAdded dans StorageVisualization");
-    // Rafraîchir les bouteilles si la fonction est disponible
-    if (typeof fetchBottles === 'function') {
-      fetchBottles();
-    }
-  }, [fetchBottles]);
 
   const renderGrid = () => {
     if (!selectedLocation?.row_count || !selectedLocation?.column_count) return null;
@@ -221,9 +202,28 @@ const StorageVisualization: React.FC<Props> = ({
         height: '100%',
       }}
     >
-      <Tabs value={currentTab} onChange={onTabChange} sx={{ mb: 3 }}>
-        <Tab label="Vue Graphique" />
-      </Tabs>
+      <Box mb={3} display="flex" justifyContent="space-between" alignItems="center">
+        <Tabs value={currentTab} onChange={onTabChange}>
+          <Tab label="Vue Graphique" />
+        </Tabs>
+        
+        {/* Menu de sélection du mode d'affichage */}
+        <Box>
+          <Tab 
+            label={displayMode === 'default' ? 'Mode Couleur' : 
+                  displayMode === 'temperature' ? 'Mode Température' : 
+                  'Mode Étiquettes'}
+            onClick={(e) => {
+              // Rotation des modes d'affichage
+              const modes = ['default', 'temperature', 'labels'];
+              const currentIndex = modes.indexOf(displayMode);
+              const nextIndex = (currentIndex + 1) % modes.length;
+              onDisplayModeChange(e as React.MouseEvent<HTMLElement>, modes[nextIndex]);
+            }}
+            sx={{ minWidth: 'auto', opacity: 1 }}
+          />
+        </Box>
+      </Box>
 
       {loading ? (
         <Box display="flex" justifyContent="center" my={4}>
@@ -231,12 +231,6 @@ const StorageVisualization: React.FC<Props> = ({
         </Box>
       ) : (
         <>
-          <SearchAndFiltersBar
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            toggleFilter={toggleFilter}
-            isFilterActive={isFilterActive}
-          />
           <LegendDisplay displayMode={displayMode} />
           {renderGrid()}
           <StatisticsPanel

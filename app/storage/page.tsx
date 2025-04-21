@@ -10,13 +10,13 @@ import Navbar from '../components/Navbar';
 import { supabase } from '../utils/supabase';
 
 // Importer les composants
-import StorageHeader from './components/StorageHeader';
 import StorageLocationsList from './components/StorageLocationsList';
 import StorageVisualization from './components/StorageVisualization';
 import BottleDetailDialog from './components/dialogs/BottleDetailDialog';
 import ConsumeBottleDialog from './components/dialogs/ConsumeBottleDialog';
 import LabelDialog from './components/dialogs/LabelDialog';
 import AperitifSuggestionsDialog from './components/dialogs/AperitifSuggestionsDialog';
+import SpeedDialMenu from './components/SpeedDialMenu';
 
 // Importer les hooks personnalisés
 import { useStorageData } from './hooks/useStorageData';
@@ -69,7 +69,6 @@ const EmptyLocationView = () => {
 };
 
 export default function StorageManagement() {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const theme = useTheme();
   
   // Utiliser le hook personnalisé pour la gestion des données
@@ -95,11 +94,9 @@ export default function StorageManagement() {
   } = useNotifications();
 
   // États locaux
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [selectedBottle, setSelectedBottle] = useState<Bottle | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [addBottleDialogOpen, setAddBottleDialogOpen] = useState(false);
   const [consumeBottleDialogOpen, setConsumeBottleDialogOpen] = useState(false);
   const [inventoryMode, setInventoryMode] = useState(false);
@@ -112,13 +109,9 @@ export default function StorageManagement() {
   
   // Nous conservons cette variable pour de futures fonctionnalités
   // liées à l'API, comme l'analyse des bouteilles
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiKey, setApiKey] = useState('');
   
-  const [filters, 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    setFilters
-  ] = useState({
+  const [filters, setFilters] = useState({
     colors: [],
     labels: [],
     vintage: { min: null, max: null },
@@ -283,6 +276,18 @@ export default function StorageManagement() {
     // Implémentation de l'optimisation ici
   };
 
+  // Gestion de la recherche
+  const handleSearch = () => {
+    // Implémenter la logique de recherche ici
+    showNotification('Fonctionnalité de recherche à implémenter', 'info');
+  };
+
+  // Gestion des filtres
+  const handleFilter = () => {
+    // Implémenter la logique de filtrage ici
+    showNotification('Fonctionnalité de filtrage à implémenter', 'info');
+  };
+
   // Générer suggestions apéritif
   const handleAperitifSuggestions = () => {
     if (bottles.length === 0) {
@@ -350,50 +355,70 @@ export default function StorageManagement() {
       >
         <Breadcrumbs />
         
-        {/* En-tête avec titre et actions */}
-        <StorageHeader 
-          onSearch={() => {/* TODO: Implémentation recherche */}}
-          onFilter={() => {/* TODO: Implémentation filtre */}}
+        {/* Titre principal */}
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          fontWeight="500"
+          sx={{
+            mb: 3,
+            backgroundImage: 'linear-gradient(45deg, #880000, #B30000)',
+            backgroundClip: 'text',
+            color: 'transparent',
+            textShadow: theme.palette.mode === 'dark' ? '0px 2px 4px rgba(0,0,0,0.5)' : 'none'
+          }}
+        >
+          Mes Emplacements
+        </Typography>
+
+        {locations.length === 0 ? (
+          <EmptyLocationView />
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'row' }}>
+            {/* Liste des emplacements - Colonne de gauche */}
+            <Box sx={{ width: '25%', pr: 2 }}>
+              <StorageLocationsList 
+                locations={locations}
+                selectedLocation={selectedLocation}
+                onLocationSelect={handleLocationChange}
+                onLocationDelete={deleteLocation}
+              />
+            </Box>
+            
+            {/* Visualisation de l'emplacement - Colonne de droite */}
+            <Box sx={{ width: '75%' }}>
+                <StorageVisualization 
+                  selectedLocation={selectedLocation}
+                  positions={positions}
+                  bottles={bottles}
+                  loading={positionLoading}
+                  currentTab={currentTab}
+                  onTabChange={handleChangeTab}
+                  displayMode={displayMode}
+                  onDisplayModeChange={handleDisplayModeChange}
+                  onPositionClick={handlePositionClick}
+                  hoveredPositionInfo={hoveredPositionInfo}
+                  onPositionHover={setHoveredPositionInfo}
+                  fetchBottles={() => {
+                    if (selectedLocation) {
+                      fetchPositionsAndBottles(selectedLocation.id, filters);
+                    }
+                  }}
+                />
+            </Box>
+          </Box>
+        )}
+
+        {/* Menu d'actions flottant */}
+        <SpeedDialMenu 
+          onSearch={handleSearch}
+          onFilter={handleFilter}
+          onInventoryToggle={setInventoryMode}
           onOptimize={handleOptimizePlacement}
           onAperitifSuggestions={handleAperitifSuggestions}
-          displayMode={displayMode}
-          onDisplayModeChange={handleDisplayModeChange}
+          activeFilters={filters.colors.concat(filters.labels)}
           inventoryMode={inventoryMode}
-          onInventoryModeChange={(value) => setInventoryMode(value)}
         />
-
-{locations.length === 0 ? (
-  <EmptyLocationView />
-) : (
-  <Box sx={{ display: 'flex', flexDirection: 'row' }}>
-    {/* Liste des emplacements - Colonne de gauche */}
-    <Box sx={{ width: '25%', pr: 2 }}>
-      <StorageLocationsList 
-        locations={locations}
-        selectedLocation={selectedLocation}
-        onLocationSelect={handleLocationChange}
-        onLocationDelete={deleteLocation}
-      />
-    </Box>
-    
-    {/* Visualisation de l'emplacement - Colonne de droite */}
-    <Box sx={{ width: '75%' }}>
-        <StorageVisualization 
-          selectedLocation={selectedLocation}
-          positions={positions}
-          bottles={bottles}
-          loading={positionLoading}
-          currentTab={currentTab}
-          onTabChange={handleChangeTab}
-          displayMode={displayMode}
-          onDisplayModeChange={handleDisplayModeChange}
-          onPositionClick={handlePositionClick}
-          hoveredPositionInfo={hoveredPositionInfo}
-          onPositionHover={setHoveredPositionInfo}
-        />
-      </Box>
-  </Box>
-)}
 
         {/* Dialogues */}
         {selectedBottle && (
