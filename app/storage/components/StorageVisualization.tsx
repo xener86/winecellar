@@ -30,11 +30,10 @@ interface Props {
   currentTab: number;
   onTabChange: (e: React.SyntheticEvent, val: number) => void;
   displayMode: string;
-  onDisplayModeChange: (e: React.MouseEvent<HTMLElement>, mode: string | null) => void;
   onPositionClick: (position: Position) => void;
   hoveredPositionInfo: { row: number; col: number } | null;
   onPositionHover: (info: { row: number; col: number } | null) => void;
-  fetchBottles?: () => void;
+  onBottleAdded?: () => void;
 }
 
 const StorageVisualization: React.FC<Props> = ({
@@ -45,11 +44,10 @@ const StorageVisualization: React.FC<Props> = ({
   currentTab,
   onTabChange,
   displayMode,
-  onDisplayModeChange,
   onPositionClick,
   hoveredPositionInfo,
   onPositionHover,
-  fetchBottles
+  onBottleAdded
 }) => {
   const theme = useTheme();
   const cellSize = 60;
@@ -73,9 +71,9 @@ const StorageVisualization: React.FC<Props> = ({
             const info = await wineAIService.getAgingData(
               {
                 name: wine.name,
-                vintage: wine.vintage, // number
+                vintage: wine.vintage,
                 color: wine.color,
-                region: wine.region ?? undefined // string | undefined
+                region: wine.region ?? undefined
               },
               { enhanceWithAI: false }
             );
@@ -104,10 +102,10 @@ const StorageVisualization: React.FC<Props> = ({
   const handleBottleAdded = useCallback(() => {
     console.log("Bouteille ajoutée avec succès - handleBottleAdded dans StorageVisualization");
     // Rafraîchir les bouteilles si la fonction est disponible
-    if (typeof fetchBottles === 'function') {
-      fetchBottles();
+    if (typeof onBottleAdded === 'function') {
+      onBottleAdded();
     }
-  }, [fetchBottles]);
+  }, [onBottleAdded]);
 
   const getBottleAtPosition = (positionId: string): Bottle | null =>
     bottles.find((b) => b.position_id === positionId) || null;
@@ -133,6 +131,14 @@ const StorageVisualization: React.FC<Props> = ({
       justifyContent: 'center',
       alignItems: 'center',
     };
+  };
+
+  const handleModeSelectClick = () => {
+    // Rotation des modes d'affichage
+    const modes = ['default', 'temperature', 'labels'];
+    const currentIndex = modes.indexOf(displayMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    console.log("Changing display mode from", displayMode, "to", modes[nextIndex]);
   };
 
   const renderGrid = () => {
@@ -213,13 +219,7 @@ const StorageVisualization: React.FC<Props> = ({
             label={displayMode === 'default' ? 'Mode Couleur' : 
                   displayMode === 'temperature' ? 'Mode Température' : 
                   'Mode Étiquettes'}
-            onClick={(e) => {
-              // Rotation des modes d'affichage
-              const modes = ['default', 'temperature', 'labels'];
-              const currentIndex = modes.indexOf(displayMode);
-              const nextIndex = (currentIndex + 1) % modes.length;
-              onDisplayModeChange(e as React.MouseEvent<HTMLElement>, modes[nextIndex]);
-            }}
+            onClick={handleModeSelectClick}
             sx={{ minWidth: 'auto', opacity: 1 }}
           />
         </Box>

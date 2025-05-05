@@ -1,4 +1,4 @@
-// app/storage/components/SpeedDialMenu.tsx
+// app/storage/components/EnhancedSpeedDialMenu.tsx
 import React, { useState } from 'react';
 import { 
   SpeedDial, SpeedDialAction, SpeedDialIcon,
@@ -14,6 +14,9 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import QrCodeIcon from '@mui/icons-material/QrCode';
 import LunchDiningIcon from '@mui/icons-material/LunchDining';
+import WineBarIcon from '@mui/icons-material/WineBar';
+import ThermostatIcon from '@mui/icons-material/Thermostat';
+import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useRouter } from 'next/navigation';
 
 interface SpeedDialMenuProps {
@@ -22,16 +25,20 @@ interface SpeedDialMenuProps {
   onInventoryToggle: (active: boolean) => void;
   onOptimize: () => void;
   onAperitifSuggestions: () => void;
+  displayMode: string;
+  onDisplayModeChange: (mode: string) => void;
   activeFilters: string[];
   inventoryMode: boolean;
 }
 
-const SpeedDialMenu: React.FC<SpeedDialMenuProps> = ({ 
+const EnhancedSpeedDialMenu: React.FC<SpeedDialMenuProps> = ({ 
   onSearch, 
   onFilter, 
   onInventoryToggle, 
   onOptimize,
   onAperitifSuggestions,
+  displayMode,
+  onDisplayModeChange,
   activeFilters = [],
   inventoryMode = false
 }) => {
@@ -45,6 +52,18 @@ const SpeedDialMenu: React.FC<SpeedDialMenuProps> = ({
   
   const handleOpen = () => {
     setOpen(true);
+  };
+
+  // Supprimé la fonction non utilisée getActionIcon
+
+  // Supprimé la fonction non utilisée getDisplayModeLabel
+
+  const toggleDisplayMode = () => {
+    const modes = ['default', 'temperature', 'labels'];
+    const currentIndex = modes.indexOf(displayMode);
+    const nextIndex = (currentIndex + 1) % modes.length;
+    onDisplayModeChange(modes[nextIndex]);
+    handleClose();
   };
 
   const actions = [
@@ -69,6 +88,16 @@ const SpeedDialMenu: React.FC<SpeedDialMenuProps> = ({
       name: `Mode inventaire ${inventoryMode ? '(actif)' : ''}`, 
       action: () => { handleClose(); onInventoryToggle(!inventoryMode); },
       backgroundColor: alpha(theme.palette.primary.main, 0.1)
+    },
+    { 
+      icon: displayMode === 'default' ? <WineBarIcon /> : 
+           displayMode === 'temperature' ? <ThermostatIcon /> : 
+           <FavoriteIcon />, 
+      name: displayMode === 'default' ? 'Mode Couleur' : 
+           displayMode === 'temperature' ? 'Mode Température' : 
+           'Mode Étiquettes', 
+      action: toggleDisplayMode,
+      backgroundColor: alpha(theme.palette.secondary.main, 0.1)
     },
     { 
       icon: <QrCodeIcon />, 
@@ -104,7 +133,7 @@ const SpeedDialMenu: React.FC<SpeedDialMenuProps> = ({
 
   return (
     <SpeedDial
-      ariaLabel="Menu d'actions"
+      ariaLabel="Menu d&apos;actions"
       sx={{ 
         position: 'fixed', 
         bottom: 24, 
@@ -149,4 +178,4 @@ const SpeedDialMenu: React.FC<SpeedDialMenuProps> = ({
   );
 };
 
-export default SpeedDialMenu;
+export default EnhancedSpeedDialMenu;

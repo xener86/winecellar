@@ -3,8 +3,9 @@ import { Box, Typography, Tooltip, useTheme, alpha } from '@mui/material';
 import {
   Add as AddIcon,
   WineBar as WineBarIcon,
+  Water as WaterIcon
 } from '@mui/icons-material';
-import { Bottle } from '@types';
+import { Bottle } from '@/utils/types';
 
 interface WineAgingInfo {
   current_phase?: string;
@@ -21,13 +22,6 @@ interface Props {
   getBottleStyle: (bottle: Bottle | null) => React.CSSProperties;
   agingInfo: Record<string, WineAgingInfo>;
 }
-
-const customLabels = [
-  { id: 'favorite', label: 'Coup de cœur', color: '#FFD54F', icon: <WineBarIcon /> },
-  { id: 'special', label: 'Occasion spéciale', color: '#7986CB', icon: <WineBarIcon /> },
-  { id: 'keep', label: 'À garder', color: '#81C784', icon: <WineBarIcon /> },
-  { id: 'aperitif', label: 'Apéritif', color: '#FF8A65', icon: <WineBarIcon /> },
-];
 
 const BottleCell: React.FC<Props> = ({
   bottle,
@@ -46,10 +40,20 @@ const BottleCell: React.FC<Props> = ({
   const isBottleInFilter = bottle && filteredBottles.includes(bottle);
   const isFiltered = bottle && !isBottleInFilter;
 
+  // Informations personnalisées pour les étiquettes (mapping)
+  const customLabels = [
+    { id: 'favorite', label: 'Coup de cœur', color: '#FFD54F', icon: <WineBarIcon /> },
+    { id: 'special', label: 'Occasion spéciale', color: '#7986CB', icon: <WineBarIcon /> },
+    { id: 'keep', label: 'À garder', color: '#81C784', icon: <WineBarIcon /> },
+    { id: 'aperitif', label: 'Apéritif', color: '#FF8A65', icon: <WineBarIcon /> },
+    { id: 'ready', label: 'Prêt à boire', color: '#4CAF50', icon: <WaterIcon /> },
+  ];
+
   const labelInfo = customLabels.find(l => l.id === bottle?.label);
 
   const content = bottle ? (
     <Box sx={{ ...getBottleStyle(bottle), width: bottleSize, height: bottleSize }}>
+      {/* Badge "Prêt à boire" */}
       {agingInfo[bottle.id]?.drink_now && (
         <Box sx={{ position: 'absolute', top: -8, left: -8 }}>
           <Tooltip title="Prêt à boire" arrow>
@@ -65,12 +69,13 @@ const BottleCell: React.FC<Props> = ({
                 boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
               }}
             >
-              <WineBarIcon sx={{ fontSize: 12, color: 'white' }} />
+              <WaterIcon sx={{ fontSize: 12, color: 'white' }} />
             </Box>
           </Tooltip>
         </Box>
       )}
 
+      {/* Badge d'étiquette personnalisée */}
       {bottle.label && displayMode !== 'labels' && labelInfo && (
         <Box sx={{ position: 'absolute', top: -8, right: -8 }}>
           <Tooltip title={labelInfo.label} arrow>
@@ -92,6 +97,7 @@ const BottleCell: React.FC<Props> = ({
         </Box>
       )}
 
+      {/* Millésime */}
       <Typography
         variant="caption"
         align="center"
@@ -145,45 +151,82 @@ const BottleCell: React.FC<Props> = ({
     </Box>
   );
 
+  // Tooltip personnalisé selon le mode d'affichage
+  const getTooltipContent = () => {
+    if (!bottle || !bottle.wine) return "Emplacement vide";
+    
+    let content = `${bottle.wine.name} ${bottle.wine.vintage || ''}`;
+    
+    if (bottle.wine.domain) {
+      content += `\n${bottle.wine.domain}`;
+    }
+    
+    if (displayMode === 'temperature') {
+      // Ajouter information sur la température de service
+      const tempMap: Record<string, string> = {
+        'red': '16-18°C (Température ambiante)',
+        'white': '8-10°C (Très frais)',
+        'rose': '10-12°C (Frais)',
+        'sparkling': '6-8°C (Très frais)',
+        'fortified': '14-16°C (Tempéré)'
+      };
+      
+      if (bottle.wine.color && tempMap[bottle.wine.color]) {
+        content += `\nTempérature de service: ${tempMap[bottle.wine.color]}`;
+      }
+    }
+    
+    if (bottle.label) {
+      const label = customLabels.find(l => l.id === bottle.label);
+      if (label) {
+        content += `\nÉtiquette: ${label.label}`;
+      }
+    }
+    
+    return content;
+  };
+
   return (
-    <Box
-      onClick={onClick}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
-      sx={{
-        m: 0.3,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        position: 'relative',
-        transition: 'transform 0.2s ease',
-        transform: hovered ? 'scale(1.05)' : 'scale(1)',
-        opacity: isFiltered ? 0.4 : 1
-      }}
-    >
+    <Tooltip title={getTooltipContent()} arrow>
       <Box
+        onClick={onClick}
+        onMouseEnter={() => onHover(true)}
+        onMouseLeave={() => onHover(false)}
         sx={{
-          width: cellSize,
-          height: cellSize,
-          borderRadius: '50%',
-          border: `1px solid ${theme.palette.grey[400]}`,
-          background: isDarkMode
-            ? 'linear-gradient(145deg, rgba(25,25,25,0.6), rgba(40,40,40,0.4))'
-            : 'linear-gradient(145deg, rgba(245,245,245,0.7), rgba(255,255,255,0.8))',
-          boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.1)',
+          m: 0.3,
           display: 'flex',
-          justifyContent: 'center',
+          flexDirection: 'column',
           alignItems: 'center',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2), 0 0 0 3px rgba(25, 118, 210, 0.3)',
-            transform: 'translateY(-3px)'
-          }
+          position: 'relative',
+          transition: 'transform 0.2s ease',
+          transform: hovered ? 'scale(1.05)' : 'scale(1)',
+          opacity: isFiltered ? 0.4 : 1
         }}
       >
-        {content}
+        <Box
+          sx={{
+            width: cellSize,
+            height: cellSize,
+            borderRadius: '50%',
+            border: `1px solid ${theme.palette.grey[400]}`,
+            background: isDarkMode
+              ? 'linear-gradient(145deg, rgba(25,25,25,0.6), rgba(40,40,40,0.4))'
+              : 'linear-gradient(145deg, rgba(245,245,245,0.7), rgba(255,255,255,0.8))',
+            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.1)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            transition: 'all 0.3s ease',
+            '&:hover': {
+              boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.2), 0 0 0 3px rgba(25, 118, 210, 0.3)',
+              transform: 'translateY(-3px)'
+            }
+          }}
+        >
+          {content}
+        </Box>
       </Box>
-    </Box>
+    </Tooltip>
   );
 };
 
