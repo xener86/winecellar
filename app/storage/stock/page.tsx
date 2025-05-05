@@ -52,13 +52,6 @@ type Wine = {
   alcohol_percentage: number | null;
 };
 
-// Type pour les erreurs
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface ApiError {
-  message: string;
-  [key: string]: unknown;
-}
-
 export default function StockManagement() {
   const router = useRouter();
   const theme = useTheme();
@@ -66,6 +59,8 @@ export default function StockManagement() {
   
   const [crates, setCrates] = useState<Crate[]>([]);
   const [selectedCrate, setSelectedCrate] = useState<Crate | null>(null);
+  // Nouvel état pour contrôler l'ouverture/fermeture du modal de détail
+  const [isDetailViewOpen, setIsDetailViewOpen] = useState(false);
   const [isAddCrateModalOpen, setIsAddCrateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notification, setNotification] = useState({
@@ -140,7 +135,7 @@ export default function StockManagement() {
           message: `Erreur: ${errorMessage}`,
           severity: 'error'
       });
-  }
+    }
   }, [router]);
   
   // Charger les caisses au chargement de la page
@@ -218,8 +213,10 @@ export default function StockManagement() {
       // Mettre à jour l'état local
       setCrates(crates.filter(crate => crate.id !== crateId));
       
+      // Si la caisse sélectionnée est celle qu'on supprime, réinitialiser
       if (selectedCrate?.id === crateId) {
         setSelectedCrate(null);
+        setIsDetailViewOpen(false); // S'assurer que la vue détaillée est fermée
       }
       
       setNotification({
@@ -236,6 +233,22 @@ export default function StockManagement() {
         severity: 'error'
       });
     }
+  };
+
+  // Nouvelle fonction pour gérer la sélection d'une caisse
+  const handleSelectCrate = (crateId: string) => {
+    const crate = crates.find(c => c.id === crateId);
+    if (crate) {
+      setSelectedCrate(crate);
+      setIsDetailViewOpen(true); // Ouvrir la vue détaillée
+    }
+  };
+
+  // Fonction pour fermer la vue détaillée
+  const handleCloseDetailView = () => {
+    setIsDetailViewOpen(false);
+    // On peut garder selectedCrate pour une éventuelle réouverture, ou le réinitialiser
+    // setSelectedCrate(null);
   };
 
   // Composant de fil d'Ariane
@@ -339,10 +352,9 @@ export default function StockManagement() {
           <Grid container spacing={3}>
             {crates.map((crate) => (
               <Grid component="div" key={crate.id} sx={{ width: { xs: '100%', sm: '50%', md: '33%' } }}>
-
                 <CrateCard 
                   crate={crate}
-                  onSelect={() => setSelectedCrate(crate)}
+                  onSelect={handleSelectCrate} // Utiliser la nouvelle fonction
                   onDelete={() => handleDeleteCrate(crate.id)}
                 />
               </Grid>
@@ -357,11 +369,12 @@ export default function StockManagement() {
           onAdd={handleAddCrate}
         />
         
-        {/* Vue détaillée d'une caisse */}
+        {/* Vue détaillée d'une caisse - passer l'état open */}
         {selectedCrate && (
           <CrateDetailView 
             crate={selectedCrate}
-            onClose={() => setSelectedCrate(null)}
+            open={isDetailViewOpen} // Contrôler l'état d'ouverture
+            onClose={handleCloseDetailView} // Gérer la fermeture
             onRefresh={fetchCrates}
           />
         )}

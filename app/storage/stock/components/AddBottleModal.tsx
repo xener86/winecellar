@@ -1,6 +1,5 @@
-// storage/stock/components/AddBottleModal.tsx
-// CORRECTION: Importer useCallback
-import React, { useState, useEffect, useCallback } from 'react'; 
+// app/storage/stock/components/AddBottleModal.tsx
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -10,22 +9,34 @@ import {
   TextField,
   Box,
   Typography,
-  useTheme,
   CircularProgress,
-  Autocomplete,
-  RadioGroup,
-  Radio,
-  FormControlLabel,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  SelectChangeEvent // Importer SelectChangeEvent pour l'utiliser
+  SelectChangeEvent,
+  Divider,
+  Slider,
+  Alert,
+  Tab,
+  Tabs,
+  Paper,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Chip,
+  IconButton,
+  InputAdornment
 } from '@mui/material';
-import Grid from '@mui/material/Grid'; // Utilisation de Grid ici
+import { useTheme } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
+import SearchIcon from '@mui/icons-material/Search';
+import WineBarIcon from '@mui/icons-material/WineBar';
+import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { supabase } from '../../../utils/supabase';
 
-// Déplacer l'interface Wine ici ou l'importer d'un fichier centralisé
+// Types
 interface Wine {
   id: string;
   name: string;
@@ -37,98 +48,258 @@ interface Wine {
   alcohol_percentage?: number | null;
 }
 
-type AddBottleModalProps = {
+interface WineData {
+  name: string;
+  vintage: number | null;
+  region: string;
+  appellation: string;
+  domain: string;
+  color: string;
+  alcohol_percentage: number | null;
+  grapes: string[];
+  notes: string;
+}
+
+interface AddBottleModalProps {
   open: boolean;
   onClose: () => void;
-  crateId: string; // ID de la caisse à laquelle ajouter
+  crateId: string;
   onBottleAdded: () => void;
-};
+  apiKey?: string;
+  currentCapacity?: number;
+  maxCapacity?: number;
+}
 
 const AddBottleModal: React.FC<AddBottleModalProps> = ({
   open,
   onClose,
   crateId,
-  onBottleAdded
+  onBottleAdded,
+  apiKey = '',
+  currentCapacity = 0,
+  maxCapacity = 6
 }) => {
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
-
+  
+  // État des onglets
+  const [tabIndex, setTabIndex] = useState(0);
+  
+  // États communs
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<'existing' | 'new'>('existing');
-
-  const [wines, setWines] = useState<Wine[]>([]); // Utiliser le type Wine défini
+  const [availableSpace, setAvailableSpace] = useState(maxCapacity - currentCapacity);
+  
+  // États pour le vin existant
+  const [wines, setWines] = useState<Wine[]>([]);
   const [selectedWine, setSelectedWine] = useState<Wine | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Préciser le type pour Wine
-  const [newWine, setNewWine] = useState<Omit<Wine, 'id'>>({ // Omettre 'id' car il sera généré
+  const [quantity, setQuantity] = useState(1);
+  
+  // États pour l'IA
+  const [newWineSearchTerm, setNewWineSearchTerm] = useState('');
+  const [newWineLoading, setNewWineLoading] = useState(false);
+  const [newWineError, setNewWineError] = useState('');
+  const [newWineData, setNewWineData] = useState<WineData | null>(null);
+  const [newWineQuantity, setNewWineQuantity] = useState(1);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+  
+  // États pour nouveau vin manuel
+  const [newWine, setNewWine] = useState<Omit<Wine, 'id'>>({
     name: '',
-    color: 'red', // Valeur par défaut valide
-    vintage: new Date().getFullYear(), // Valeur par défaut
+    color: 'red',
+    vintage: new Date().getFullYear(),
     domain: '',
     region: '',
     appellation: '',
     alcohol_percentage: null
   });
+  const [manualWineQuantity, setManualWineQuantity] = useState(1);
 
-  // CORRECTION: Envelopper fetchWines dans useCallback
+  // Calculer l'espace disponible
+  useEffect(() => {
+    if (open) {
+      setAvailableSpace(maxCapacity - currentCapacity);
+    }
+  }, [open, maxCapacity, currentCapacity]);
+
+  // Rechercher les vins existants
   const fetchWines = useCallback(async () => {
+    if (!open) return;
+    
     setLoading(true);
     try {
       let query = supabase.from('wine').select('*');
-
-      // searchTerm est utilisé ici, il doit être une dépendance de useCallback
-      if (searchTerm) { 
-        query = query.ilike('name', `%${searchTerm}%`);
+      
+      if (searchTerm) {
+        query = query.or(`name.ilike.%${searchTerm}%,domain.ilike.%${searchTerm}%,region.ilike.%${searchTerm}%`);
       }
-
+      
       const { data, error } = await query.order('name');
       if (error) throw error;
-
-      setWines((data || []) as Wine[]); // Cast en Wine[] si la structure correspond
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        console.error('Erreur chargement vins:', error.message);
-      } else {
-        console.error('Erreur chargement vins:', error);
-      }
-      // Ajouter une notification utilisateur ici serait une bonne pratique
+      
+      setWines(data || []);
+    } catch (error) {
+      console.error('Erreur lors de la récupération des vins:', error);
     } finally {
       setLoading(false);
     }
-  // Dépendances de useCallback: searchTerm
-  }, [searchTerm]); 
+  }, [open, searchTerm]);
 
-
-  // CORRECTION: Ajouter fetchWines aux dépendances du useEffect
+  // Charger les vins au montage
   useEffect(() => {
-    // Charger les vins seulement si le modal est ouvert et en mode 'existant'
-    if (open && mode === 'existing') {
-      fetchWines(); 
+    if (open && tabIndex === 0) {
+      fetchWines();
     }
-    // Ajouter fetchWines (stable grâce à useCallback) aux dépendances
-  }, [open, mode, searchTerm, fetchWines]); 
+  }, [open, tabIndex, fetchWines]);
 
-  // Fonction pour ajouter une bouteille existante
+  // Fonction pour parser les données du vin depuis la réponse de l'IA
+  const parseWineData = (aiResponse: string): WineData => {
+    const wineData: WineData = {
+      name: '',
+      vintage: null,
+      region: '',
+      appellation: '',
+      domain: '',
+      color: '',
+      alcohol_percentage: null,
+      grapes: [],
+      notes: '',
+    };
+
+    // Extraction du nom et millésime
+    const nameRegex = /\*\*Nom du vin\*\* : (.*?) \*\*Millésime\*\* : (\d{4})/;
+    const nameMatch = aiResponse.match(nameRegex);
+    if (nameMatch) {
+      wineData.name = nameMatch[1].trim();
+      wineData.vintage = parseInt(nameMatch[2]);
+    }
+
+    // Extraction de l'appellation et région
+    const appellationRegex = /\*\*Appellation\*\* : (.*?) \*\*Région\*\* : (.*?) \*\*Type\*\*/;
+    const appellationMatch = aiResponse.match(appellationRegex);
+    if (appellationMatch) {
+      const fullAppellation = appellationMatch[1].trim();
+      // Extraire l'appellation sans l'AOC/AOP si présent
+      wineData.appellation = fullAppellation.split('(')[0].trim();
+      wineData.region = appellationMatch[2].trim();
+    }
+
+    // Extraction du domaine
+    const domaineRegex = /\*\*Domaine\*\* : (.*?)$/m;
+    const domaineMatch = aiResponse.match(domaineRegex);
+    if (domaineMatch) {
+      wineData.domain = domaineMatch[1].trim();
+    }
+
+    // Extraction de la couleur
+    const typeRegex = /\*\*Type\*\* : Vin (.*?) \*\*Alcool\*\*/;
+    const typeMatch = aiResponse.match(typeRegex);
+    if (typeMatch) {
+      const colorFrench = typeMatch[1].toLowerCase().trim();
+      // Conversion de la couleur en anglais pour correspondre au schéma de la BDD
+      const colorMap: Record<string, string> = {
+        'rouge': 'red',
+        'blanc': 'white',
+        'rosé': 'rose',
+        'effervescent': 'sparkling',
+        'fortifié': 'fortified',
+        'mousseux': 'sparkling',
+        'champagne': 'sparkling'
+      };
+      wineData.color = colorMap[colorFrench] || colorFrench;
+    }
+
+    // Extraction du pourcentage d'alcool
+    const alcoholRegex = /\*\*Alcool\*\* : .*?(\d+[,.]?\d*).*?%/;
+    const alcoholMatch = aiResponse.match(alcoholRegex);
+    if (alcoholMatch) {
+      wineData.alcohol_percentage = parseFloat(alcoholMatch[1].replace(',', '.'));
+    }
+
+    // Extraction des cépages
+    const grapesSection = aiResponse.split('🧬 Cépages :')[1]?.split('👁️ Robe')[0];
+    if (grapesSection) {
+      const grapesList = grapesSection.split('*').filter(item => item.trim() !== '');
+      wineData.grapes = grapesList.map(grape => 
+        grape.trim().replace(/\(.+\)/g, '').trim() // Enlève les commentaires entre parenthèses
+      ).filter(grape => grape !== '');
+    }
+
+    // Construction des notes de dégustation
+    let notes = "";
+    
+    // Robe
+    const robeSection = aiResponse.split('👁️ Robe :')[1]?.split('👃 Nez')[0];
+    if (robeSection) {
+      notes += "ROBE :\n";
+      const robePoints = robeSection.split('*').filter(item => item.trim() !== '');
+      notes += robePoints.map(point => point.trim()).join('\n') + "\n\n";
+    }
+    
+    // Nez
+    const nezSection = aiResponse.split('👃 Nez :')[1]?.split('👄 Bouche')[0];
+    if (nezSection) {
+      notes += "NEZ :\n";
+      const nezPoints = nezSection.split('*').filter(item => item.trim() !== '');
+      notes += nezPoints.map(point => point.trim()).join('\n') + "\n\n";
+    }
+    
+    // Bouche
+    const boucheSection = aiResponse.split('👄 Bouche :')[1]?.split('🕰️ Potentiel de garde')[0];
+    if (boucheSection) {
+      notes += "BOUCHE :\n";
+      const bouchePoints = boucheSection.split('*').filter(item => item.trim() !== '');
+      notes += bouchePoints.map(point => point.trim()).join('\n') + "\n\n";
+    }
+    
+    // Potentiel de garde
+    const gardeSection = aiResponse.split('🕰️ Potentiel de garde :')[1]?.split('🍽️ Accords mets & vin')[0];
+    if (gardeSection) {
+      notes += "POTENTIEL DE GARDE :\n" + gardeSection.trim() + "\n\n";
+    }
+    
+    // Accords mets & vin
+    const accordsSection = aiResponse.split('🍽️ Accords mets & vin :')[1];
+    if (accordsSection) {
+      notes += "ACCORDS METS & VIN :\n";
+      const accordsPoints = accordsSection.split('*').filter(item => item.trim() !== '');
+      notes += accordsPoints.map(point => point.trim()).join('\n');
+    }
+    
+    wineData.notes = notes.trim();
+
+    return wineData;
+  };
+
+  // Changement d'onglet
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+    setTabIndex(newValue);
+    setNewWineError('');
+  };
+
+  // Ajouter un vin existant
   const handleAddExistingWine = async () => {
     if (!selectedWine) return;
+    
     setLoading(true);
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) throw new Error('Utilisateur non connecté');
 
-      const { error } = await supabase.from('bottle').insert({
+      // Créer un tableau de bouteilles à ajouter
+      const bottlesToAdd = Array(quantity).fill(null).map(() => ({
         wine_id: selectedWine.id,
-        crate_id: crateId, // Utiliser la prop crateId
+        crate_id: crateId,
         status: 'in_stock',
         acquisition_date: new Date().toISOString().split('T')[0],
         user_id: user.id
-      });
+      }));
+
+      const { error } = await supabase.from('bottle').insert(bottlesToAdd);
       if (error) throw error;
 
-      onBottleAdded(); // Appeler le callback de succès
-      handleClose(); // Fermer le modal
-    } catch (error: unknown) {
+      onBottleAdded();
+      handleClose();
+    } catch (error) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue';
       console.error("Erreur ajout bouteille:", message);
       alert(`Erreur: ${message}`);
@@ -136,20 +307,186 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
       setLoading(false);
     }
   };
-  const handleColorChange = (event: SelectChangeEvent<string>) => {
-    setNewWine(prev => ({
-      ...prev,
-      color: event.target.value as Wine['color']
-    }));
+
+  // Rechercher un vin avec l'IA
+  const handleSearchWineAI = async () => {
+    if (!newWineSearchTerm.trim() || !apiKey) return;
+    
+    setNewWineLoading(true);
+    setNewWineError('');
+    setNewWineData(null);
+    
+    try {
+      // Configuration de la requête API OpenAI
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [
+            {
+              role: "system",
+              content: "Tu es un sommelier expert. Crée une fiche détaillée pour un vin avec le format exact suivant :\n\n🍷 Fiche de dégustation : [Nom complet du vin avec millésime]\n**Nom du vin** : [Nom du vin sans le millésime] **Millésime** : [Année] **Appellation** : [Appellation] (AOC/AOP), [Région générale] **Région** : [Région détaillée] **Type** : Vin [couleur] **Alcool** : Environ [pourcentage] % vol **Domaine** : [Nom du domaine]\n🧬 Cépages :\n* [Cépage principal]\n* [Cépage secondaire]\n* [Autres cépages si applicable]\n👁️ Robe :\n* [Description de la couleur et de l'aspect]\n👃 Nez :\n* Première impression : [arômes immédiats]\n* Second nez : [arômes après aération]\n👄 Bouche :\n* Attaque : [premières sensations]\n* [Structure, équilibre, tanins]\n* [Autres caractéristiques]\n* Finale : [persistance et saveurs finales]\n🕰️ Potentiel de garde :\n* [Estimation de la période optimale de consommation]\n🍽️ Accords mets & vin :\n* [Suggestion d'accompagnement 1]\n* [Suggestion d'accompagnement 2]\n* [Suggestion d'accompagnement 3]\n* [Plat traditionnel associé]"
+            },
+            {
+              role: "user",
+              content: newWineSearchTerm
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 800
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur API OpenAI: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      const aiResponseText = data.choices[0].message.content;
+      
+      // Parser les données du vin
+      const parsedData = parseWineData(aiResponseText);
+      setNewWineData(parsedData);
+      
+    } catch (error) {
+      const typedError = error as Error;
+      console.error('Erreur lors de la requête AI:', typedError.message);
+      setNewWineError(`Erreur: ${typedError.message || 'Une erreur est survenue lors de la communication avec l\'API'}`);
+    } finally {
+      setNewWineLoading(false);
+    }
   };
 
-  // Fonction pour créer un nouveau vin et ajouter la bouteille
-  const handleAddNewWine = async () => {
-    if (!newWine.name) return; // Vérification basique
+  // Ajouter un nouveau vin via IA
+  const handleAddNewWineAI = async () => {
+    if (!newWineData) return;
+    
+    setNewWineLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non connecté');
+      
+      // 1. Créer le vin
+      const wineDataToSave = {
+        name: newWineData.name,
+        vintage: newWineData.vintage,
+        region: newWineData.region || null,
+        appellation: newWineData.appellation || null,
+        domain: newWineData.domain || null,
+        color: newWineData.color,
+        alcohol_percentage: newWineData.alcohol_percentage,
+        notes: newWineData.notes,
+        user_id: user.id,
+      };
+      
+      const { data: wineResponse, error: wineError } = await supabase
+        .from('wine')
+        .insert([wineDataToSave])
+        .select();
+      
+      if (wineError) throw wineError;
+      
+      if (!wineResponse || wineResponse.length === 0) {
+        throw new Error('Erreur lors de la création du vin');
+      }
+      
+      const wineId = wineResponse[0].id;
+      
+      // 2. Ajouter les cépages si disponibles
+      if (newWineData.grapes && newWineData.grapes.length > 0) {
+        for (const grapeName of newWineData.grapes) {
+          if (!grapeName.trim()) continue;
+          
+          // Vérifier si le cépage existe
+          const { data: existingGrape } = await supabase
+            .from('grape')
+            .select('id')
+            .eq('name', grapeName)
+            .single();
+          
+          let grapeId;
+          
+          if (existingGrape) {
+            grapeId = existingGrape.id;
+          } else {
+            // Créer le cépage s'il n'existe pas
+            const { data: newGrape, error: grapeError } = await supabase
+              .from('grape')
+              .insert([{ name: grapeName }])
+              .select();
+            
+            if (grapeError) continue;
+            
+            grapeId = newGrape?.[0]?.id;
+          }
+          
+          if (grapeId) {
+            // Associer le cépage au vin
+            await supabase
+              .from('wine_grape')
+              .insert([{ 
+                wine_id: wineId, 
+                grape_id: grapeId,
+                percentage: null
+              }]);
+          }
+        }
+      }
+      
+      // 3. Créer les bouteilles et les placer directement
+      const bottlesToAdd = Array(newWineQuantity).fill(null).map(() => ({
+        wine_id: wineId,
+        crate_id: crateId,
+        status: 'in_stock',
+        acquisition_date: new Date().toISOString().split('T')[0],
+        user_id: user.id
+      }));
+
+      const { error: bottleError } = await supabase
+        .from('bottle')
+        .insert(bottlesToAdd);
+      
+      if (bottleError) throw bottleError;
+      
+      onBottleAdded();
+      handleClose();
+    } catch (error) {
+      const typedError = error as Error;
+      console.error('Erreur lors de l\'ajout du vin:', typedError.message);
+      setNewWineError(`Erreur: ${typedError.message || 'Une erreur est survenue'}`);
+    } finally {
+      setNewWineLoading(false);
+    }
+  };
+
+  // Gérer les changements pour le nouveau vin manuel
+  const handleNewWineChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string>
+  ) => {
+    const { name, value } = e.target;
+    if(name) {
+      setNewWine(prev => ({
+        ...prev,
+        [name]: (name === 'vintage' || name === 'alcohol_percentage') 
+              ? (value === '' ? null : name === 'vintage' ? parseInt(value) : parseFloat(value)) 
+              : value
+      }));
+    }
+  };
+
+  // Ajouter un nouveau vin manuel
+  const handleAddManualWine = async () => {
+    if (!newWine.name) return;
+    
     setLoading(true);
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error('Utilisateur non connecté');
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Utilisateur non connecté');
 
       // Créer le nouveau vin
       const { data: wineData, error: wineError } = await supabase
@@ -157,33 +494,37 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
         .insert({
           name: newWine.name,
           color: newWine.color,
-          // S'assurer que vintage est number ou null
-          vintage: typeof newWine.vintage === 'number' ? newWine.vintage : null, 
+          vintage: typeof newWine.vintage === 'number' ? newWine.vintage : null,
           domain: newWine.domain || null,
           region: newWine.region || null,
           appellation: newWine.appellation || null,
           alcohol_percentage: newWine.alcohol_percentage,
-          user_id: user.id // Lier à l'utilisateur
+          user_id: user.id
         })
-        .select() // Récupérer l'enregistrement créé
-        .single(); // S'attendre à un seul résultat
+        .select()
+        .single();
 
       if (wineError) throw wineError;
       if (!wineData) throw new Error("La création du vin n'a pas retourné de données.");
 
-      // Créer la bouteille associée
-      const { error: bottleError } = await supabase.from('bottle').insert({
-        wine_id: wineData.id, // Utiliser l'ID du vin créé
-        crate_id: crateId, // Utiliser la prop crateId
+      // Créer les bouteilles associées
+      const bottlesToAdd = Array(manualWineQuantity).fill(null).map(() => ({
+        wine_id: wineData.id,
+        crate_id: crateId,
         status: 'in_stock',
         acquisition_date: new Date().toISOString().split('T')[0],
         user_id: user.id
-      });
+      }));
+
+      const { error: bottleError } = await supabase
+        .from('bottle')
+        .insert(bottlesToAdd);
+        
       if (bottleError) throw bottleError;
 
-      onBottleAdded(); // Callback de succès
-      handleClose(); // Fermer
-    } catch (error: unknown) {
+      onBottleAdded();
+      handleClose();
+    } catch (error) {
       const message = error instanceof Error ? error.message : 'Erreur inconnue';
       console.error('Erreur création vin/bouteille:', message);
       alert(`Erreur: ${message}`);
@@ -192,7 +533,7 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
     }
   };
 
-  // Réinitialiser le formulaire et fermer
+  // Fermer et réinitialiser
   const handleClose = () => {
     setSelectedWine(null);
     setNewWine({
@@ -200,165 +541,543 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
       domain: '', region: '', appellation: '', alcohol_percentage: null
     });
     setSearchTerm('');
-    setMode('existing'); // Revenir au mode par défaut ?
-    onClose(); // Appeler le onClose passé en prop
+    setTabIndex(0);
+    setQuantity(1);
+    setNewWineQuantity(1);
+    setManualWineQuantity(1);
+    setNewWineData(null);
+    setNewWineSearchTerm('');
+    onClose();
   };
 
-  // Gestionnaire de changement pour les champs du nouveau vin
-  const handleNewWineChange = (
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<Wine['color']>
-    ) => {
-    const { name, value } = e.target;
-    if(name) {
-       setNewWine(prev => ({
-          ...prev,
-          // Gérer la conversion pour vintage et alcohol_percentage
-          [name]: (name === 'vintage' || name === 'alcohol_percentage') 
-                 ? (value === '' ? null : name === 'vintage' ? parseInt(value, 10) : parseFloat(value)) 
-                 : value
-       }));
-    }
+  // Obtenir informations sur la couleur
+  const getWineColorInfo = (color: string) => {
+    const colors: Record<string, { label: string, bgColor: string, textColor: string }> = {
+      'red': { label: 'Rouge', bgColor: 'rgba(139, 0, 0, 0.9)', textColor: '#fff' },
+      'white': { label: 'Blanc', bgColor: 'rgba(245, 245, 220, 0.9)', textColor: '#000' },
+      'rose': { label: 'Rosé', bgColor: 'rgba(255, 182, 193, 0.9)', textColor: '#000' },
+      'sparkling': { label: 'Effervescent', bgColor: 'rgba(176, 196, 222, 0.9)', textColor: '#000' },
+      'fortified': { label: 'Fortifié', bgColor: 'rgba(139, 69, 19, 0.9)', textColor: '#fff' }
+    };
+    
+    return colors[color] || { label: 'Inconnu', bgColor: '#607D8B', textColor: '#fff' };
   };
-
 
   return (
     <Dialog
       open={open}
-      onClose={handleClose}
+      onClose={loading || newWineLoading ? undefined : handleClose}
       fullWidth
       maxWidth="md"
-      PaperProps={{ sx: { borderRadius: 2, bgcolor: isDarkMode ? '#1A1A1A' : 'white' } }}
+      PaperProps={{ sx: { borderRadius: 2 } }}
     >
-      <DialogTitle>Ajouter une bouteille à la caisse</DialogTitle> 
+      <DialogTitle sx={{ pb: 1 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Typography variant="h6">
+            Ajouter des bouteilles
+            <Typography component="span" variant="subtitle1" color="text.secondary" sx={{ ml: 1 }}>
+              (Espace disponible: {availableSpace} bouteilles)
+            </Typography>
+          </Typography>
+          <IconButton 
+            onClick={loading || newWineLoading ? undefined : handleClose}
+            disabled={loading || newWineLoading}
+            size="small"
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+      </DialogTitle>
 
-      <DialogContent>
-        <FormControl component="fieldset" sx={{ mb: 3 }}>
-          <RadioGroup row value={mode} onChange={(e) => setMode(e.target.value as 'existing' | 'new')}>
-            <FormControlLabel value="existing" control={<Radio />} label="Choisir un vin existant" />
-            <FormControlLabel value="new" control={<Radio />} label="Ajouter un nouveau vin" />
-          </RadioGroup>
-        </FormControl>
+      <DialogContent dividers>
+        <Tabs
+          value={tabIndex}
+          onChange={handleTabChange}
+          sx={{ mb: 3 }}
+          variant="fullWidth"
+        >
+          <Tab label="Vin existant" />
+          <Tab label="IA Sommelier" />
+          <Tab label="Nouveau vin manuel" />
+        </Tabs>
 
-        {mode === 'existing' ? (
-          // --- Section Vin Existant ---
+        {tabIndex === 0 && (
+          // Onglet vin existant
           <Box>
-            <Autocomplete
-              options={wines}
-              loading={loading && wines.length === 0} // Afficher loading seulement si on charge initialement
-              getOptionLabel={(option) => `${option.name} ${option.vintage || ''}${option.domain ? ` (${option.domain})` : ''}` }
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Rechercher un vin existant"
-                  variant="outlined"
-                  value={searchTerm} // Lier value à searchTerm pour le contrôle
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    ...params.InputProps,
-                    endAdornment: (
-                      <>
-                        {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                        {params.InputProps.endAdornment}
-                      </>
-                    )
-                  }}
-                />
-              )}
-              value={selectedWine}
-              onChange={(_, newValue) => setSelectedWine(newValue)}
-              isOptionEqualToValue={(option, value) => option.id === value?.id} // Important pour comparer objets
-              renderOption={(props, option) => (
-                // Ajouter key ici pour la performance de React
-                <Box component="li" {...props} key={option.id}> 
-                  <Box> {/* Pas besoin de flex ici */}
-                    <Typography variant="body1">{option.name} {option.vintage || ''}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {option.domain && `${option.domain}`}
-                      {option.region && `${option.domain ? ' - ' : ''}${option.region}`}
-                    </Typography>
-                  </Box>
-                </Box>
-              )}
-              noOptionsText="Aucun vin trouvé"
-              loadingText="Chargement..."
+            <Typography variant="body2" paragraph>
+              Ajoutez une ou plusieurs bouteilles d&apos;un vin déjà référencé dans votre cave.
+            </Typography>
+
+            <TextField
+              fullWidth
+              label="Rechercher un vin"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && fetchWines()}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: loading && (
+                  <InputAdornment position="end">
+                    <CircularProgress size={20} />
+                  </InputAdornment>
+                )
+              }}
+              sx={{ mb: 2 }}
             />
 
-            {/* Affichage des détails du vin sélectionné (pour confirmation) */}
+            <Paper 
+              variant="outlined" 
+              sx={{ 
+                maxHeight: 250, 
+                overflow: 'auto',
+                borderRadius: 2,
+                mb: 3
+              }}
+            >
+              <List sx={{ p: 0 }}>
+                {wines.length === 0 ? (
+                  <ListItem>
+                    <ListItemText 
+                      primary={
+                        loading 
+                          ? "Chargement des vins..." 
+                          : "Aucun vin trouvé. Essayez de modifier votre recherche."
+                      }
+                    />
+                  </ListItem>
+                ) : (
+                  wines.map((wine) => (
+                    <ListItem 
+                      key={wine.id} 
+                      onClick={() => setSelectedWine(wine.id === selectedWine?.id ? null : wine)}
+                      divider
+                      sx={{
+                        cursor: 'pointer',
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                        backgroundColor: wine.id === selectedWine?.id 
+                          ? theme.palette.action.selected 
+                          : 'transparent'
+                      }}
+                    >
+                      <ListItemIcon>
+                        <Box 
+                          sx={{ 
+                            width: 40, 
+                            height: 40, 
+                            borderRadius: '50%', 
+                            bgcolor: getWineColorInfo(wine.color).bgColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: getWineColorInfo(wine.color).textColor
+                          }}
+                        >
+                          <WineBarIcon />
+                        </Box>
+                      </ListItemIcon>
+                      <ListItemText 
+                        primary={
+                          <Typography variant="subtitle1">
+                            {wine.name} {wine.vintage && `(${wine.vintage})`}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography variant="body2" component="span">
+                            {wine.domain && `${wine.domain} • `}
+                            {getWineColorInfo(wine.color).label}
+                            {wine.region && ` • ${wine.region}`}
+                          </Typography>
+                        }
+                      />
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </Paper>
+
             {selectedWine && (
-              <Box sx={{ mt: 3, p: 2, border: `1px solid ${theme.palette.divider}`, borderRadius: 2, bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }}>
-                <Typography variant="subtitle1" gutterBottom>Vin sélectionné</Typography>
-                <Grid container spacing={1}>
-                <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                <Typography variant="body2"><b>Nom:</b> {selectedWine.name}</Typography></Grid>
-                <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                <Typography variant="body2"><b>Couleur:</b> {selectedWine.color}</Typography></Grid>
-                  {selectedWine.vintage && <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                  <Typography variant="body2"><b>Millésime:</b> {selectedWine.vintage}</Typography></Grid>}
-                  {selectedWine.domain &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                  <Typography variant="body2"><b>Domaine:</b> {selectedWine.domain}</Typography></Grid>}
-                  {selectedWine.region &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                  <Typography variant="body2"><b>Région:</b> {selectedWine.region}</Typography></Grid>}
-                  {selectedWine.appellation &&                   <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                  <Typography variant="body2"><b>Appellation:</b> {selectedWine.appellation}</Typography></Grid>}
-                </Grid>
+              <Box>
+                <Typography variant="subtitle2" gutterBottom>
+                  Nombre de bouteilles à ajouter
+                </Typography>
+                
+                <Box display="flex" alignItems="center" gap={2} mb={3}>
+                  <Slider
+                    value={quantity}
+                    onChange={(_e, newValue) => setQuantity(newValue as number)}
+                    step={1}
+                    marks
+                    min={1}
+                    max={Math.min(availableSpace, 6)}
+                    valueLabelDisplay="auto"
+                    sx={{ flexGrow: 1 }}
+                  />
+                  <TextField
+                    type="number"
+                    value={quantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val >= 1 && val <= Math.min(availableSpace, 6)) {
+                        setQuantity(val);
+                      }
+                    }}
+                    inputProps={{ min: 1, max: Math.min(availableSpace, 6) }}
+                    sx={{ width: 80 }}
+                  />
+                </Box>
+                
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  {quantity > 1 
+                    ? `Vous allez ajouter ${quantity} bouteilles de ${selectedWine.name} ${selectedWine.vintage || ''}`
+                    : `Vous allez ajouter 1 bouteille de ${selectedWine.name} ${selectedWine.vintage || ''}`}
+                </Alert>
               </Box>
             )}
           </Box>
-        ) : (
-          // --- Section Nouveau Vin ---
-          <Box>
-            <Typography variant="subtitle2" gutterBottom>Informations sur le nouveau vin</Typography>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid component="div" sx={{ width: { xs: '100%'} }}>
+        )}
 
-                <TextField label="Nom du vin" name="name" fullWidth required value={newWine.name} onChange={handleNewWineChange}/>
-              </Grid>
-              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-              <FormControl fullWidth>
+        {tabIndex === 1 && (
+          // Onglet IA Sommelier
+          <Box>
+            <Typography variant="body2" paragraph>
+              Utilisez l&apos;IA pour trouver rapidement les informations sur un vin et l&apos;ajouter à votre cave.
+            </Typography>
+            <Box sx={{ mb: 3 }}>
+              <TextField
+                fullWidth
+                label="Nom du vin à rechercher"
+                placeholder="Ex: Château Margaux 2015"
+                value={newWineSearchTerm}
+                onChange={(e) => setNewWineSearchTerm(e.target.value)}
+                helperText="Entrez le nom du vin et son millésime pour une meilleure précision"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  )
+                }}
+                sx={{ mb: 2 }}
+              />
+              
+              <Button
+                fullWidth
+                variant="contained"
+                startIcon={newWineLoading ? <CircularProgress size={24} color="inherit" /> : <AutoAwesomeIcon />}
+                onClick={handleSearchWineAI}
+                disabled={newWineLoading || !newWineSearchTerm.trim() || !apiKey}
+                sx={{ height: 56, borderRadius: 2 }}
+              >
+                Rechercher avec l&apos;IA
+              </Button>
+              
+              {!apiKey && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  Clé API OpenAI non configurée. Veuillez la configurer dans les paramètres.
+                </Alert>
+              )}
+            </Box>
+            
+            {newWineError && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {newWineError}
+              </Alert>
+            )}
+            
+            {newWineData && (
+              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    {newWineData.name} {newWineData.vintage && `(${newWineData.vintage})`}
+                  </Typography>
+                  <Chip 
+                    label={getWineColorInfo(newWineData.color).label}
+                    sx={{ 
+                      bgcolor: getWineColorInfo(newWineData.color).bgColor,
+                      color: getWineColorInfo(newWineData.color).textColor,
+                    }}
+                  />
+                </Box>
+                
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    <Box sx={{ minWidth: '200px', flex: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Domaine
+                      </Typography>
+                      <Typography variant="body1">
+                        {newWineData.domain || '-'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ minWidth: '200px', flex: 1 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        Région
+                      </Typography>
+                      <Typography variant="body1">
+                        {newWineData.region || '-'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                    {newWineData.appellation && (
+                      <Box sx={{ minWidth: '200px', flex: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Appellation
+                        </Typography>
+                        <Typography variant="body1">
+                          {newWineData.appellation}
+                        </Typography>
+                      </Box>
+                    )}
+                    {newWineData.alcohol_percentage && (
+                      <Box sx={{ minWidth: '200px', flex: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Alcool
+                        </Typography>
+                        <Typography variant="body1">
+                          {newWineData.alcohol_percentage}%
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+                
+                {newWineData.grapes && newWineData.grapes.length > 0 && (
+                  <>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+                      Cépages
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {newWineData.grapes.map((grape, index) => (
+                        <Chip key={index} label={grape} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  </>
+                )}
+                
+                <Box sx={{ mt: 2 }}>
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => setPreviewExpanded(!previewExpanded)}
+                  >
+                    {previewExpanded ? 'Masquer les détails' : 'Voir plus de détails'}
+                  </Button>
+                </Box>
+                
+                {previewExpanded && (
+                  <Box sx={{ mt: 2 }}>
+                    <Divider sx={{ mb: 2 }} />
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                      {newWineData.notes}
+                    </Typography>
+                  </Box>
+                )}
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Typography variant="subtitle2" gutterBottom>
+                  Nombre de bouteilles à ajouter
+                </Typography>
+                
+                <Box display="flex" alignItems="center" gap={2} mb={2}>
+                  <Slider
+                    value={newWineQuantity}
+                    onChange={(_e, newValue) => setNewWineQuantity(newValue as number)}
+                    step={1}
+                    marks
+                    min={1}
+                    max={Math.min(availableSpace, 6)}
+                    valueLabelDisplay="auto"
+                    sx={{ flexGrow: 1 }}
+                  />
+                  <TextField
+                    type="number"
+                    value={newWineQuantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      if (val >= 1 && val <= Math.min(availableSpace, 6)) {
+                        setNewWineQuantity(val);
+                      }
+                    }}
+                    inputProps={{ min: 1, max: Math.min(availableSpace, 6) }}
+                    sx={{ width: 80 }}
+                  />
+                </Box>
+              </Paper>
+            )}
+          </Box>
+        )}
+        
+        {tabIndex === 2 && (
+          // Onglet nouveau vin manuel
+          <Box>
+            <Typography variant="body2" paragraph>
+              Ajoutez manuellement un nouveau vin dans votre cave avec tous les détails.
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField 
+                label="Nom du vin" 
+                name="name" 
+                fullWidth 
+                required 
+                value={newWine.name} 
+                onChange={handleNewWineChange}
+              />
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <FormControl sx={{ minWidth: '200px', flex: 1 }}>
                   <InputLabel>Couleur</InputLabel>
                   <Select 
-  name="color" 
-  value={newWine.color} 
-  label="Couleur" 
-  onChange={handleColorChange}>
-  <MenuItem value="red">Rouge</MenuItem>
-  <MenuItem value="white">Blanc</MenuItem>
-  <MenuItem value="rose">Rosé</MenuItem>
-  <MenuItem value="sparkling">Effervescent</MenuItem>
-  <MenuItem value="fortified">Fortifié</MenuItem>
-</Select>
+                    name="color" 
+                    value={newWine.color} 
+                    label="Couleur" 
+                    onChange={handleNewWineChange as (e: SelectChangeEvent<string>) => void}
+                  >
+                    <MenuItem value="red">Rouge</MenuItem>
+                    <MenuItem value="white">Blanc</MenuItem>
+                    <MenuItem value="rose">Rosé</MenuItem>
+                    <MenuItem value="sparkling">Effervescent</MenuItem>
+                    <MenuItem value="fortified">Fortifié</MenuItem>
+                  </Select>
                 </FormControl>
-              </Grid>
-              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-              <TextField label="Millésime" name="vintage" type="number" fullWidth value={newWine.vintage ?? ''} onChange={handleNewWineChange} inputProps={{ min: 1900, max: new Date().getFullYear() }} />
-              </Grid>
-                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                <TextField label="Domaine" name="domain" fullWidth value={newWine.domain ?? ''} onChange={handleNewWineChange}/>
-              </Grid>
-              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-              <TextField label="Région" name="region" fullWidth value={newWine.region ?? ''} onChange={handleNewWineChange}/>
-              </Grid>
-                  <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-                <TextField label="Appellation" name="appellation" fullWidth value={newWine.appellation ?? ''} onChange={handleNewWineChange}/>
-              </Grid>
-              <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }}>
-              <TextField label="Degré d'alcool (%)" name="alcohol_percentage" type="number" fullWidth value={newWine.alcohol_percentage ?? ''} onChange={handleNewWineChange} inputProps={{ min: 0, max: 100, step: 0.1 }} />
-              </Grid>
-            </Grid>
+                
+                <TextField 
+                  label="Millésime" 
+                  name="vintage" 
+                  type="number" 
+                  sx={{ minWidth: '200px', flex: 1 }}
+                  value={newWine.vintage ?? ''} 
+                  onChange={handleNewWineChange} 
+                  inputProps={{ min: 1900, max: new Date().getFullYear() }}
+                />
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <TextField 
+                  label="Domaine" 
+                  name="domain" 
+                  sx={{ minWidth: '200px', flex: 1 }}
+                  value={newWine.domain ?? ''} 
+                  onChange={handleNewWineChange}
+                />
+                
+                <TextField 
+                  label="Région" 
+                  name="region" 
+                  sx={{ minWidth: '200px', flex: 1 }}
+                  value={newWine.region ?? ''} 
+                  onChange={handleNewWineChange}
+                />
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+                <TextField 
+                  label="Appellation" 
+                  name="appellation" 
+                  sx={{ minWidth: '200px', flex: 1 }}
+                  value={newWine.appellation ?? ''} 
+                  onChange={handleNewWineChange}
+                />
+                
+                <TextField 
+                  label="Degré d&apos;alcool (%)" 
+                  name="alcohol_percentage" 
+                  type="number" 
+                  sx={{ minWidth: '200px', flex: 1 }}
+                  value={newWine.alcohol_percentage ?? ''} 
+                  onChange={handleNewWineChange} 
+                  inputProps={{ min: 0, max: 100, step: 0.1 }}
+                />
+              </Box>
+            </Box>
+            
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Nombre de bouteilles à ajouter
+              </Typography>
+              
+              <Box display="flex" alignItems="center" gap={2} mb={2}>
+                <Slider
+                  value={manualWineQuantity}
+                  onChange={(_e, newValue) => setManualWineQuantity(newValue as number)}
+                  step={1}
+                  marks
+                  min={1}
+                  max={Math.min(availableSpace, 6)}
+                  valueLabelDisplay="auto"
+                  sx={{ flexGrow: 1 }}
+                />
+                <TextField
+                  type="number"
+                  value={manualWineQuantity}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    if (val >= 1 && val <= Math.min(availableSpace, 6)) {
+                      setManualWineQuantity(val);
+                    }
+                  }}
+                  inputProps={{ min: 1, max: Math.min(availableSpace, 6) }}
+                  sx={{ width: 80 }}
+                />
+              </Box>
+            </Box>
           </Box>
         )}
       </DialogContent>
-
+      
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={handleClose} sx={{ borderRadius: 2 }} disabled={loading}>Annuler</Button>
-        <Button
-          onClick={mode === 'existing' ? handleAddExistingWine : handleAddNewWine}
-          variant="contained"
-          disabled={loading || (mode === 'existing' ? !selectedWine : !newWine.name)}
-          sx={{ borderRadius: 2 }}
+        <Button 
+          onClick={handleClose} 
+          sx={{ borderRadius: 2 }} 
+          disabled={loading || newWineLoading}
         >
-          {loading ? <CircularProgress size={24} color="inherit" /> : 'Ajouter la bouteille'}
+          Annuler
         </Button>
+        
+        {tabIndex === 0 && (
+          <Button
+            onClick={handleAddExistingWine}
+            variant="contained"
+            disabled={loading || !selectedWine || quantity < 1 || quantity > availableSpace}
+            sx={{ borderRadius: 2 }}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 
+              quantity > 1 ? `Ajouter ${quantity} bouteilles` : 'Ajouter la bouteille'}
+          </Button>
+        )}
+        
+        {tabIndex === 1 && newWineData && (
+          <Button
+            onClick={handleAddNewWineAI}
+            variant="contained"
+            disabled={newWineLoading || !newWineData || newWineQuantity < 1 || newWineQuantity > availableSpace}
+            sx={{ borderRadius: 2 }}
+          >
+            {newWineLoading ? <CircularProgress size={24} color="inherit" /> : 
+              newWineQuantity > 1 ? `Ajouter ${newWineQuantity} bouteilles` : 'Ajouter la bouteille'}
+          </Button>
+        )}
+        
+        {tabIndex === 2 && (
+          <Button
+            onClick={handleAddManualWine}
+            variant="contained"
+            disabled={loading || !newWine.name || manualWineQuantity < 1 || manualWineQuantity > availableSpace}
+            sx={{ borderRadius: 2 }}
+          >
+            {loading ? <CircularProgress size={24} color="inherit" /> : 
+              manualWineQuantity > 1 ? `Ajouter ${manualWineQuantity} bouteilles` : 'Ajouter la bouteille'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

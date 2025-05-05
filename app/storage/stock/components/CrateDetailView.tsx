@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
-  Button, Typography, Box, /* List, ListItem, */ Divider, // CORRECTION: List, ListItem supprimés
+  Button, Typography, Box, Divider,
   Paper, IconButton, Tooltip, Chip, useTheme,
   Grid, Card, CardContent, CardActions
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
-// CORRECTION: SaveIcon supprimé
-// import SaveIcon from '@mui/icons-material/Save'; 
 import RestaurantIcon from '@mui/icons-material/Restaurant';
 import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { supabase } from '../../../utils/supabase';
-import AddBottleModal from './AddBottleModal'; // Assurez-vous que ce composant existe et est correct
+import AddBottleModal from './AddBottleModal';
 
-// --- AJOUT: Types (Idéalement depuis un fichier central) ---
+// Types
 type Wine = {
   id: string;
   name?: string | null;
@@ -24,14 +22,13 @@ type Wine = {
   vintage?: number | null;
   domain?: string | null;
   region?: string | null;
-  // Ajoutez d'autres champs si nécessaire
 };
 
 type Bottle = {
   id: string;
   wine_id: string;
-  position_id?: string | null; // Peut être null si pas dans une position spécifique de Crate/Shelf
-  crate_id?: string | null; // Ajout potentiel si une bouteille peut être liée à une caisse
+  position_id?: string | null;
+  crate_id?: string | null;
   status?: string;
   acquisition_date?: string | null;
   consumption_date?: string | null;
@@ -44,18 +41,22 @@ type CrateData = {
   id: string; 
   name: string;
   capacity: number;
-  bottles: Bottle[]; // Tableau de bouteilles
+  bottles: Bottle[];
 };
-// --- FIN AJOUT TYPES ---
 
-// CORRECTION: Utiliser CrateData et typer onRefresh
 type CrateDetailViewProps = {
-  crate: CrateData; // Utilisation du type CrateData
+  crate: CrateData;
+  open: boolean; // Ajout d'une prop open pour contrôler l'état
   onClose: () => void;
-  onRefresh: () => void; // Garder onRefresh si utilisé (appelé après actions)
+  onRefresh: () => void;
 };
 
-const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRefresh }) => {
+const CrateDetailView: React.FC<CrateDetailViewProps> = ({ 
+  crate, 
+  open, // Utiliser cette prop pour contrôler l'état de Dialog
+  onClose, 
+  onRefresh 
+}) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isAddBottleModalOpen, setIsAddBottleModalOpen] = useState(false);
@@ -73,11 +74,9 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
         .eq('id', bottleId);
       
       if (error) throw error;
-      onRefresh(); // Rafraîchir après suppression
-    // CORRECTION: Typage de l'erreur dans catch
+      onRefresh();
     } catch (error: unknown) { 
       console.error('Erreur suppression bouteille:', error);
-      // Utiliser instanceof Error pour accéder à message
       alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
     } finally {
       setLoading(false);
@@ -95,14 +94,13 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
         .update({
           status: 'consumed',
           consumption_date: new Date().toISOString().split('T')[0],
-          crate_id: null, // Supposer qu'on la retire de la caisse aussi
-          position_id: null // Et de sa position si elle en avait une
+          crate_id: null,
+          position_id: null
         })
         .eq('id', bottleId);
       
       if (error) throw error;
-      onRefresh(); // Rafraîchir
-    // CORRECTION: Typage de l'erreur dans catch
+      onRefresh();
     } catch (error: unknown) {
       console.error('Erreur consommation bouteille:', error);
       alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
@@ -121,14 +119,13 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
         .from('bottle')
         .update({
           status: 'gifted',
-          crate_id: null, // Supposer qu'on la retire de la caisse
+          crate_id: null,
           position_id: null
         })
         .eq('id', bottleId);
       
       if (error) throw error;
-      onRefresh(); // Rafraîchir
-    // CORRECTION: Typage de l'erreur dans catch
+      onRefresh();
     } catch (error: unknown) { 
       console.error('Erreur statut offert:', error);
       alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
@@ -137,15 +134,9 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
     }
   };
   
-  // Fonction pour transférer une bouteille vers une étagère
-  // CORRECTION: Préfixer bottleId avec _ car non utilisé
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleTransferToShelf = async (_bottleId: string) => { 
-    // Cette fonction sera complétée pour ouvrir un sélecteur d'étagère et d'emplacement
     alert('Fonctionnalité de transfert vers étagère à implémenter');
-    // TODO: Implémenter la logique de transfert
-    // const { error } = await supabase.from('bottle').update({ crate_id: null, position_id: newPositionId }).eq('id', bottleId);
-    // if (!error) onRefresh();
   };
   
   // Fonction pour ajouter une bouteille à la caisse
@@ -153,32 +144,36 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
     setIsAddBottleModalOpen(true);
   };
   
-  // Obtenir la couleur de fond (inchangée)
+  // Obtenir la couleur de fond
   const getWineColorCode = (color: string | null | undefined): string => {
-     // ... (code existant) ...
      return color === 'red' ? 'rgba(139, 0, 0, 0.9)' : 
             color === 'white' ? 'rgba(245, 245, 220, 0.9)' :
             color === 'rose' ? 'rgba(255, 182, 193, 0.9)' :
             color === 'sparkling' ? 'rgba(176, 196, 222, 0.9)' :
-            color === 'fortified' ? 'rgba(139, 69, 19, 0.9)' : // Ajout Fortified
+            color === 'fortified' ? 'rgba(139, 69, 19, 0.9)' :
             'rgba(120, 120, 120, 0.7)';
   };
   
-  // Obtenir le nom de la couleur en français (inchangée)
+  // Obtenir le nom de la couleur en français
   const getWineColorName = (color: string | null | undefined): string => {
-     // ... (code existant) ...
       return color === 'red' ? 'Rouge' :
             color === 'white' ? 'Blanc' :
             color === 'rose' ? 'Rosé' :
             color === 'sparkling' ? 'Effervescent' :
-            color === 'fortified' ? 'Fortifié' : // Ajout Fortified
+            color === 'fortified' ? 'Fortifié' :
             'Inconnu';
+  };
+  
+  // Gestion de la fermeture du modal
+  const handleDialogClose = () => {
+    // Appeler onClose pour informer le composant parent
+    onClose();
   };
   
   return (
     <Dialog 
-      open={true} 
-      onClose={onClose}
+      open={open} // Utiliser la prop open ici au lieu de true
+      onClose={handleDialogClose} // Utiliser notre fonction de gestion
       fullWidth
       maxWidth="md"
       PaperProps={{ sx: { borderRadius: 2, bgcolor: isDarkMode ? '#1A1A1A' : 'white', overflow: 'hidden' } }}
@@ -186,16 +181,15 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
       <DialogTitle sx={{ pb: 1 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center">
           <Typography variant="h5" component="div">
-            {crate?.name || "Détails de la caisse"} {/* Ajouter fallback */}
+            {crate?.name || "Détails de la caisse"}
           </Typography>
-          <IconButton onClick={onClose} size="small"><CloseIcon /></IconButton>
+          <IconButton onClick={handleDialogClose} size="small"><CloseIcon /></IconButton>
         </Box>
       </DialogTitle>
       
       <DialogContent sx={{ pt: 0 }}>
         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
           <Typography variant="body2" color="text.secondary">
-            {/* Vérifier existence de capacity et bottles */}
             Capacité: {crate?.bottles?.length ?? 0}/{typeof crate?.capacity === 'number' ? crate.capacity : '?'} bouteilles
           </Typography>
           
@@ -203,7 +197,6 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
             variant="outlined" 
             startIcon={<AddIcon />}
             onClick={handleAddBottle}
-            // Vérifier existence avant comparaison
             disabled={(crate?.bottles?.length ?? 0) >= (crate?.capacity ?? Infinity) || loading}
             size="small"
             sx={{ borderRadius: 2 }}
@@ -214,31 +207,35 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
         
         <Divider sx={{ mb: 3 }} />
         
-        {/* Utiliser ?.length pour vérifier */}
         {!crate || crate.bottles?.length === 0 ? ( 
-          <Paper /* ... Message caisse vide ... */ > 
-             {/* ... */}
+          <Paper sx={{ p: 3, textAlign: 'center' }}> 
+             <Typography>Cette caisse est vide. Ajoutez des bouteilles pour commencer.</Typography>
           </Paper>
         ) : (
           <Grid container spacing={2}>
-             {/* CORRECTION: Utiliser le type Bottle dans le map */}
             {crate.bottles.map((bottle: Bottle) => ( 
               <Grid component="div" key={bottle.id} sx={{ width: { xs: '100%', md: '50%' } }}>
-                <Card /* ... Styles carte bouteille ... */ >
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                   <CardContent sx={{ flexGrow: 1, pb: 1 }}>
                     <Box display="flex" alignItems="flex-start" mb={1}>
-                      <Box /* ... Box pour image/couleur bouteille ... */
+                      <Box 
                         sx={{ 
-                           /* ... autres styles ... */
-                           // Utilisation de ?. pour accès sécurisé
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                          mr: 2,
                           bgcolor: getWineColorCode(bottle.wine?.color), 
                         }}
                       >
                         {bottle.wine?.vintage && (
-                          <Typography /* ... Styles millésime ... */
+                          <Typography 
+                            variant="caption"
                             sx={{ 
-                               /* ... autres styles ... */
-                              // Utilisation de ?. pour accès sécurisé
+                              fontWeight: 'bold',
                               color: bottle.wine?.color === 'red' || bottle.wine?.color === 'fortified' ? 'white' : 'black',
                             }}
                           >
@@ -248,60 +245,57 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
                       </Box>
                       
                       <Box sx={{ flexGrow: 1 }}>
-                         {/* Utilisation de ?. et fallback */}
-                        <Typography variant="subtitle1" sx={{ /* ... */ }}>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>
                           {bottle.wine?.name || 'Vin sans nom'} 
                         </Typography>
                         
                         <Box display="flex" flexWrap="wrap" gap={0.5} mb={1}>
                           <Chip 
-                             // Utilisation de ?. et fallback
                             label={getWineColorName(bottle.wine?.color)} 
                             size="small"
                             sx={{ 
-                               /* ... autres styles ... */
-                               // Utilisation de ?. pour accès sécurisé
                               bgcolor: getWineColorCode(bottle.wine?.color),
                               color: bottle.wine?.color === 'red' || bottle.wine?.color === 'fortified' ? 'white' : 'black',
                             }}
                           />
                         </Box>
                         
-                        {/* Utilisation de ?. pour accès sécurisé */}
-                        {bottle.wine?.domain && (<Typography /* ... */ >{bottle.wine.domain}</Typography>)}
-                        {bottle.wine?.region && (<Typography /* ... */ >{bottle.wine.region}</Typography>)}
+                        {bottle.wine?.domain && (
+                          <Typography variant="body2">{bottle.wine.domain}</Typography>
+                        )}
+                        {bottle.wine?.region && (
+                          <Typography variant="body2" color="text.secondary">{bottle.wine.region}</Typography>
+                        )}
                       </Box>
                     </Box>
                     
-                    {/* Utilisation de ?. pour accès sécurisé */}
                     {bottle.acquisition_date && (
-                      <Typography /* ... */ >
+                      <Typography variant="caption" display="block" color="text.secondary">
                         Acquise le {new Date(bottle.acquisition_date).toLocaleDateString('fr-FR')}
                       </Typography>
                     )}
                   </CardContent>
                   
-                  <CardActions sx={{ /* ... */ }}>
+                  <CardActions sx={{ pt: 0, pb: 1, px: 2, justifyContent: 'space-between' }}>
                     <Box display="flex">
                       <Tooltip title="Transférer vers étagère">
-                         {/* CORRECTION: Utiliser _bottleId car renommé */}
-                        <IconButton size="small" onClick={() => handleTransferToShelf(bottle.id)} sx={{ /* ... */ }}>
+                        <IconButton size="small" onClick={() => handleTransferToShelf(bottle.id)} sx={{ mr: 0.5 }}>
                           <ArrowForwardIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Consommée">
-                        <IconButton size="small" onClick={() => handleConsumeBottle(bottle.id)} sx={{ /* ... */ }}>
+                        <IconButton size="small" onClick={() => handleConsumeBottle(bottle.id)} sx={{ mr: 0.5 }}>
                           <RestaurantIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Offerte">
-                        <IconButton size="small" onClick={() => handleGiftBottle(bottle.id)} sx={{ /* ... */ }}>
+                        <IconButton size="small" onClick={() => handleGiftBottle(bottle.id)} sx={{ mr: 0.5 }}>
                           <CardGiftcardIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </Box>
                     <Tooltip title="Supprimer">
-                      <IconButton size="small" onClick={() => handleRemoveBottle(bottle.id)} sx={{ /* ... */ }}>
+                      <IconButton size="small" onClick={() => handleRemoveBottle(bottle.id)}>
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -313,21 +307,19 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({ crate, onClose, onRef
         )}
         
         {/* Modal pour ajouter une bouteille */}
-        {/* Assurez-vous que AddBottleModal gère bien crateId */}
         <AddBottleModal 
           open={isAddBottleModalOpen}
           onClose={() => setIsAddBottleModalOpen(false)}
-          // Passer crateId si nécessaire au modal, ou gérer l'ajout directement ici
           crateId={crate?.id} 
           onBottleAdded={() => { 
-             setIsAddBottleModalOpen(false); // Fermer modal après ajout
-             onRefresh(); // Rafraîchir la liste
+             setIsAddBottleModalOpen(false);
+             onRefresh();
            }}
         />
       </DialogContent>
       
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={onClose} variant="outlined" sx={{ borderRadius: 2 }}>
+        <Button onClick={handleDialogClose} variant="outlined" sx={{ borderRadius: 2 }}>
           Fermer
         </Button>
       </DialogActions>
