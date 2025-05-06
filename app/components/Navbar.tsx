@@ -25,6 +25,10 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import QrCode2Icon from '@mui/icons-material/QrCode2';
 import PieChartIcon from '@mui/icons-material/PieChart';
+import AddIcon from '@mui/icons-material/Add';
+import LiquorIcon from '@mui/icons-material/Liquor';
+import SportsBarIcon from '@mui/icons-material/SportsBar';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
 
 export default function Navbar() {
   const router = useRouter();
@@ -35,6 +39,7 @@ export default function Navbar() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const profileMenuOpen = Boolean(anchorEl);
   const [storageOpen, setStorageOpen] = useState(pathname?.startsWith('/storage'));
+  const [spiritsOpen, setSpiritsOpen] = useState(pathname?.startsWith('/spirits'));
 
   const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -61,6 +66,13 @@ export default function Navbar() {
     }
   };
 
+  const handleSpiritsClick = (event: React.MouseEvent) => {
+    if (isMobile) {
+      event.preventDefault();
+      setSpiritsOpen(!spiritsOpen);
+    }
+  };
+
   const navItems = [
     { label: 'TABLEAU DE BORD', icon: <DashboardIcon />, path: '/' },
     { label: 'VINS', icon: <SearchIcon />, path: '/wines' },
@@ -72,8 +84,17 @@ export default function Navbar() {
         { label: 'ÉTAGÈRES', icon: <PlaceIcon />, path: '/storage' },
         { label: 'STOCK', icon: <InventoryIcon />, path: '/storage/stock' },
         { label: 'QR CODES', icon: <QrCode2Icon />, path: '/generate-qr' }
-
-
+      ]
+    },
+    { 
+      label: 'SPIRITUEUX', 
+      icon: <LiquorIcon />, 
+      path: '/spirits',
+      subItems: [
+        { label: 'MA COLLECTION', icon: <LocalBarIcon />, path: '/spirits' },
+        { label: 'AJOUTER', icon: <AddIcon />, path: '/spirits/add' },
+        { label: 'MIXOLOGIE', icon: <SportsBarIcon />, path: '/spirits/mixology' },
+        { label: 'EMPLACEMENTS', icon: <WarehouseIcon />, path: '/spirits/storage' }
       ]
     },
     { label: 'ACCORDS METS-VINS', icon: <RestaurantIcon />, path: '/food-pairing' },
@@ -118,7 +139,11 @@ export default function Navbar() {
               disablePadding 
               component={item.subItems ? 'div' : Link} 
               href={item.subItems ? undefined : item.path}
-              onClick={item.subItems ? handleStorageClick : toggleDrawer}
+              onClick={item.subItems ? 
+                (item.path === '/storage' ? handleStorageClick : 
+                 item.path === '/spirits' ? handleSpiritsClick : undefined) 
+                : toggleDrawer
+              }
               sx={{ 
                 mb: 1,
                 borderRadius: 2,
@@ -146,13 +171,17 @@ export default function Navbar() {
                   }}
                 />
                 {item.subItems && (
-                  storageOpen ? <ExpandLess /> : <ExpandMore />
+                  (item.path === '/storage' && storageOpen) || (item.path === '/spirits' && spiritsOpen) ? 
+                    <ExpandLess /> : <ExpandMore />
                 )}
               </Box>
             </ListItem>
             
             {item.subItems && (
-              <Collapse in={storageOpen} timeout="auto" unmountOnExit>
+              <Collapse in={item.path === '/storage' ? storageOpen : 
+                              item.path === '/spirits' ? spiritsOpen : false} 
+                       timeout="auto" 
+                       unmountOnExit>
                 <List component="div" disablePadding>
                   {item.subItems.map(subItem => (
                     <ListItem 
