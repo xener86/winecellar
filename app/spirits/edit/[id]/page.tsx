@@ -8,7 +8,6 @@ import {
   Button, useTheme, Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
 import { useRouter } from 'next/navigation';
@@ -104,7 +103,7 @@ export default function EditSpiritPage({ params }: PageProps) {
     
     try {
       // Filtrer pour ne pas mettre à jour l'ID, etc.
-      const { id, userId, createdAt, updatedAt, ...updates } = spiritData;
+      const { id, ...updates } = spiritData;
       
       const success = await updateSpirit(id, updates);
       

@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Box, Typography, Paper, Grid, useTheme, 
-  alpha, Tooltip, Button, CircularProgress,
-  Alert
+  alpha, Tooltip, Button, CircularProgress
 } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -28,13 +27,13 @@ const SpiritsGrid: React.FC<SpiritsGridProps> = ({
   
   // État pour le formatage de la grille
   const [gridCells, setGridCells] = useState<Array<Array<Spirit | null>>>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   
   // Générer la grille basée sur les dimensions et les spiritueux
   useEffect(() => {
     if (storageLocation.layout === 'grid' && 
-        storageLocation.rowCount && 
-        storageLocation.columnCount) {
+        storageLocation.rowCount !== null && 
+        storageLocation.columnCount !== null) {
       // Initialiser une grille vide
       const newGrid: Array<Array<Spirit | null>> = [];
       for (let row = 0; row < storageLocation.rowCount; row++) {
@@ -49,7 +48,9 @@ const SpiritsGrid: React.FC<SpiritsGridProps> = ({
         const position = spirit.storage.position;
         if (position && position.row !== null && position.column !== null) {
           // Vérifier que la position est valide dans la grille
-          if (position.row < storageLocation.rowCount && 
+          if (storageLocation.rowCount !== null && 
+              storageLocation.columnCount !== null &&
+              position.row < storageLocation.rowCount && 
               position.column < storageLocation.columnCount) {
             newGrid[position.row][position.column] = spirit;
           }

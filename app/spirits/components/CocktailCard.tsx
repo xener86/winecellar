@@ -6,7 +6,7 @@ import {
   Chip, IconButton, Tooltip, useTheme, alpha, 
   Button, Rating, Divider
 } from '@mui/material';
-import { Link } from 'next/link';
+import Link from 'next/link'; // Correction: import Link correctement
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
@@ -408,7 +408,8 @@ const CocktailCard: React.FC<CocktailCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <Box sx={{ position: 'relative' }}>
-        {cocktail.image ? (
+        {/* Correction: vérifier si 'image' existe sur le cocktail */}
+        {('image' in cocktail && cocktail.image) ? (
           <CardMedia
             component="img"
             height="160"

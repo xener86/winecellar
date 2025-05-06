@@ -5,19 +5,17 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Paper, CircularProgress, 
-  Button, useTheme, alpha, Chip, Divider, 
-  Grid, Rating, List, ListItem, ListItemIcon, 
+  Button, useTheme, alpha, Chip, 
+  Grid, List, ListItem, 
   ListItemText, IconButton, Alert, Tabs, Tab
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
-import LiquorIcon from '@mui/icons-material/Liquor';
 import PlaceIcon from '@mui/icons-material/Place';
 import EuroIcon from '@mui/icons-material/Euro';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
-import InfoIcon from '@mui/icons-material/Info';
 import PrintIcon from '@mui/icons-material/Print';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import Navbar from '@/components/Navbar';
@@ -47,7 +45,6 @@ export default function SpiritDetailsPage({ params }: PageProps) {
     selectedSpirit, 
     setSelectedSpirit,
     loading: spiritLoading, 
-    updateSpirit,
     deleteSpirit,
     fetchSpirits
   } = useSpiritData();
@@ -562,7 +559,7 @@ export default function SpiritDetailsPage({ params }: PageProps) {
                     Aucun cocktail trouvé
                   </Typography>
                   <Typography variant="body1" color="text.secondary" paragraph>
-                    Vous n'avez pas encore de cocktails utilisant ce spiritueux.
+                    Vous n&apos;avez pas encore de cocktails utilisant ce spiritueux.
                   </Typography>
                   <Button
                     component={Link}

@@ -18,9 +18,9 @@ import {
   Alert,
   Box,
   Typography,
-  useTheme
+  useTheme,
+  SelectChangeEvent
 } from '@mui/material';
-import WarehouseIcon from '@mui/icons-material/Warehouse';
 import SaveIcon from '@mui/icons-material/Save';
 import { SpiritStorageLocation } from '@/utils/types/spirit.types';
 import { supabase } from '@/utils/supabase';
@@ -92,9 +92,8 @@ const AddStorageModal: React.FC<AddStorageModalProps> = ({
   };
   
   // Gérer les changements de selects
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleSelectChange = (e: SelectChangeEvent<string>) => {
     const { name, value } = e.target;
-    if (!name) return;
     
     setFormData(prev => ({
       ...prev,
@@ -236,7 +235,7 @@ const AddStorageModal: React.FC<AddStorageModalProps> = ({
               fullWidth 
               margin="normal"
             >
-              <InputLabel>Type d'emplacement</InputLabel>
+              <InputLabel>Type d&apos;emplacement</InputLabel>
               <Select
                 name="type"
                 value={formData.type || 'cabinet'}
@@ -338,8 +337,8 @@ const AddStorageModal: React.FC<AddStorageModalProps> = ({
                 mt: 1
               }}
             >
-              {Array.from({ length: formData.rowCount }).map((_, rowIndex) =>
-                Array.from({ length: formData.columnCount }).map((_, colIndex) => (
+              {Array.from({ length: formData.rowCount || 0 }).map((_, rowIndex) =>
+                Array.from({ length: formData.columnCount || 0 }).map((_, colIndex) => (
                   <Box
                     key={`${rowIndex}-${colIndex}`}
                     sx={{

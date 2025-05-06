@@ -1,6 +1,6 @@
 // app/spirits/components/IngredientSelector.tsx
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -19,7 +19,8 @@ import {
   InputLabel,
   Grid,
   useTheme,
-  alpha
+  alpha,
+  SelectChangeEvent
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -148,7 +149,7 @@ const IngredientSelector: React.FC<IngredientSelectorProps> = ({
   };
   
   // Mettre à jour un ingrédient
-  const handleUpdateIngredient = (index: number, field: keyof CocktailIngredient, value: any) => {
+  const handleUpdateIngredient = (index: number, field: keyof CocktailIngredient, value: string | number | boolean) => {
     const updatedIngredients = [...selectedIngredients];
     updatedIngredients[index] = {
       ...updatedIngredients[index],
@@ -158,7 +159,7 @@ const IngredientSelector: React.FC<IngredientSelectorProps> = ({
     // Si c'est le nom qui a changé, vérifier si c'est un spiritueux de la collection
     if (field === 'name' && availableSpirits.length > 0) {
       const matchingSpirit = availableSpirits.find(spirit => {
-        const ingredientLower = value.toLowerCase();
+        const ingredientLower = (value as string).toLowerCase();
         const spiritNameLower = spirit.name.toLowerCase();
         const spiritTypeLower = spirit.type.toLowerCase();
         
@@ -234,6 +235,22 @@ const IngredientSelector: React.FC<IngredientSelectorProps> = ({
     setDraggedIndex(null);
     setDropIndex(null);
   };
+
+  // Gérer les changements des selects
+  const handleSelectChange = (e: SelectChangeEvent<MeasurementUnit>, index?: number) => {
+    const { value } = e.target;
+    
+    if (index !== undefined) {
+      // Mettre à jour un ingrédient existant
+      handleUpdateIngredient(index, 'unit', value as MeasurementUnit);
+    } else {
+      // Mettre à jour le nouvel ingrédient
+      setNewIngredient({ 
+        ...newIngredient, 
+        unit: value as MeasurementUnit
+      });
+    }
+  };
   
   return (
     <Box>
@@ -280,12 +297,9 @@ const IngredientSelector: React.FC<IngredientSelectorProps> = ({
             <FormControl fullWidth>
               <InputLabel>Unité</InputLabel>
               <Select
-                value={newIngredient.unit}
+                value={newIngredient.unit as MeasurementUnit}
                 label="Unité"
-                onChange={(e) => setNewIngredient({ 
-                  ...newIngredient, 
-                  unit: e.target.value as MeasurementUnit 
-                })}
+                onChange={(e) => handleSelectChange(e)}
               >
                 {measurementUnits.map((unit) => (
                   <MenuItem key={unit.value} value={unit.value}>
@@ -407,11 +421,7 @@ const IngredientSelector: React.FC<IngredientSelectorProps> = ({
                         <FormControl variant="standard" sx={{ minWidth: 80, mr: 2 }}>
                           <Select
                             value={ingredient.unit}
-                            onChange={(e) => handleUpdateIngredient(
-                              index, 
-                              'unit', 
-                              e.target.value as MeasurementUnit
-                            )}
+                            onChange={(e) => handleSelectChange(e as SelectChangeEvent<MeasurementUnit>, index)}
                           >
                             {measurementUnits.map((unit) => (
                               <MenuItem key={unit.value} value={unit.value}>

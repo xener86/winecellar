@@ -3,8 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Spirit } from '@/utils/types/spirit.types';
-import { Cocktail } from '@/utils/types/cocktail.types';
+import { CocktailIngredient } from '@/utils/types/cocktail.types';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +30,7 @@ export async function POST(req: NextRequest) {
     const userId = session.user.id;
     
     // Récupérer les cocktails de l'utilisateur
-    let query = supabase
+    const query = supabase
       .from('cocktails')
       .select('*')
       .eq('user_id', userId);
@@ -46,10 +45,10 @@ export async function POST(req: NextRequest) {
     }
     
     // Filtrer les cocktails qui utilisent ce spiritueux
-    const matchingCocktails = cocktails.filter((cocktail: any) => {
-      const ingredients = cocktail.ingredients || [];
+    const matchingCocktails = cocktails.filter((cocktail: Record<string, unknown>) => {
+      const ingredients = cocktail.ingredients as CocktailIngredient[] || [];
       
-      return ingredients.some((ingredient: any) => {
+      return ingredients.some((ingredient: CocktailIngredient) => {
         // Vérifier par ID
         if (spiritId && ingredient.spiritId === spiritId) {
           return true;
@@ -86,7 +85,7 @@ export async function POST(req: NextRequest) {
     });
     
     // Transformer les données pour le format attendu
-    const formattedCocktails = matchingCocktails.map((cocktail: any) => ({
+    const formattedCocktails = matchingCocktails.map((cocktail: Record<string, unknown>) => ({
       id: cocktail.id,
       name: cocktail.name,
       category: cocktail.category,

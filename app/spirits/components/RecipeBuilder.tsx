@@ -7,28 +7,27 @@ import {
   TextField,
   Button,
   Paper,
-  Chip,
   Grid,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Divider,
-  IconButton,
   CircularProgress,
   Alert,
+  SelectChangeEvent,
   useTheme,
   alpha
 } from '@mui/material';
 import ShuffleIcon from '@mui/icons-material/Shuffle';
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh';
-import AddIcon from '@mui/icons-material/Add';
+import SaveIcon from '@mui/icons-material/Save';
 import { 
   Cocktail, 
   CocktailCategory, 
   GlassType, 
   PreparationMethod,
-  CocktailIngredient
+  CocktailIngredient,
+  MeasurementUnit
 } from '@/utils/types/cocktail.types';
 import { Spirit } from '@/utils/types/spirit.types';
 import IngredientSelector from './IngredientSelector';
@@ -97,7 +96,7 @@ const RecipeBuilder: React.FC<RecipeBuilderProps> = ({
   };
   
   // Gérer les changements de selects
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleSelectChange = (e: SelectChangeEvent<string | string[]>) => {
     const { name, value } = e.target;
     if (!name) return;
     
@@ -288,7 +287,7 @@ const RecipeBuilder: React.FC<RecipeBuilderProps> = ({
           id: `ing_${Date.now()}_1`,
           name: mainSpirit.name,
           amount: Math.ceil(Math.random() * 6) * 0.5, // 0.5 à 3 oz
-          unit: 'oz',
+          unit: 'oz' as MeasurementUnit,
           isOptional: false,
           spiritId: mainSpirit.id
         });
@@ -306,11 +305,13 @@ const RecipeBuilder: React.FC<RecipeBuilderProps> = ({
       const numGeneric = Math.floor(Math.random() * 3) + 2; // 2-4
       for (let i = 0; i < numGeneric; i++) {
         const ing = genericIngredients[Math.floor(Math.random() * genericIngredients.length)];
+        const unitOptions: MeasurementUnit[] = ['oz', 'ml', 'dash'];
+        
         randomIngredients.push({
           id: `ing_${Date.now()}_${i+2}`,
           name: ing,
           amount: Math.ceil(Math.random() * 4) * 0.25, // 0.25 à 1 oz
-          unit: ['oz', 'ml', 'dash'][Math.floor(Math.random() * 3)], // oz, ml ou dash
+          unit: unitOptions[Math.floor(Math.random() * unitOptions.length)],
           isOptional: Math.random() > 0.8 // 20% de chance d'être optionnel
         });
       }
@@ -325,6 +326,8 @@ const RecipeBuilder: React.FC<RecipeBuilderProps> = ({
       `.trim();
       
       // Créer la recette aléatoire
+      const difficultyOptions: ('easy' | 'medium' | 'hard')[] = ['easy', 'medium', 'hard'];
+      
       const randomRecipe: Partial<Cocktail> = {
         name: cocktailNames[Math.floor(Math.random() * cocktailNames.length)],
         category: categories[Math.floor(Math.random() * categories.length)],
@@ -333,7 +336,7 @@ const RecipeBuilder: React.FC<RecipeBuilderProps> = ({
         ingredients: randomIngredients,
         garnish: Math.random() > 0.3 ? garnishes[Math.floor(Math.random() * garnishes.length)] : null, // 70% de chance d'avoir une garniture
         preparation: randomPreparation,
-        difficulty: ['easy', 'medium', 'hard'][Math.floor(Math.random() * 3)],
+        difficulty: difficultyOptions[Math.floor(Math.random() * difficultyOptions.length)],
         isCustom: true,
         isFavorite: false,
         tags: [],

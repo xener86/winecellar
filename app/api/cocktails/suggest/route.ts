@@ -3,13 +3,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { CocktailIngredient } from '@/utils/types/cocktail.types';
+import { SpiritSummary } from '@/utils/types/api.types';
 
 // Fonction pour générer une suggestion de cocktail via l'API IA
 async function generateCocktailSuggestion(
   mainSpirit: string,
-  availableSpirits: any[],
+  availableSpirits: SpiritSummary[],
   apiKey: string,
-  existing?: any
+  existing?: Record<string, unknown>
 ) {
   try {
     // Identifier l'API à utiliser
@@ -22,7 +24,7 @@ async function generateCocktailSuggestion(
     // Créer le prompt
     let prompt = `En tant que mixologue professionnel, crée une recette de cocktail originale`;
     
-    if (existing && existing.name) {
+    if (existing && 'name' in existing && typeof existing.name === 'string') {
       prompt += ` basée sur ou améliorant "${existing.name}"`;
     } else {
       prompt += ` utilisant ${mainSpirit} comme base`;
@@ -30,8 +32,8 @@ async function generateCocktailSuggestion(
     
     prompt += `. Utilise si possible les spiritueux disponibles dans cette collection: ${availableSpirits.map(s => s.name).join(', ')}.`;
     
-    if (existing && existing.ingredients && existing.ingredients.length > 0) {
-      prompt += ` La recette actuelle utilise: ${existing.ingredients.map((i: any) => `${i.amount} ${i.unit} de ${i.name}`).join(', ')}.`;
+    if (existing && 'ingredients' in existing && Array.isArray(existing.ingredients) && existing.ingredients.length > 0) {
+      prompt += ` La recette actuelle utilise: ${existing.ingredients.map((i: CocktailIngredient) => `${i.amount} ${i.unit} de ${i.name}`).join(', ')}.`;
     }
     
     prompt += ` Réponds UNIQUEMENT avec un objet JSON valide ayant cette structure précise:
@@ -85,7 +87,7 @@ async function generateCocktailSuggestion(
     
     // Ajouter les ID pour chaque ingrédient
     if (cocktailData.ingredients && Array.isArray(cocktailData.ingredients)) {
-      cocktailData.ingredients = cocktailData.ingredients.map((ingredient: any, index: number) => ({
+      cocktailData.ingredients = cocktailData.ingredients.map((ingredient: Record<string, unknown>, index: number) => ({
         ...ingredient,
         id: `ingredient_${Date.now()}_${index}`
       }));

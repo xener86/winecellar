@@ -5,16 +5,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Grid, Button, 
-  Paper, CircularProgress, Card, CardContent,
-  Tabs, Tab, useTheme, Chip, IconButton,
-  Snackbar, Alert, alpha, Divider
+  Paper, CircularProgress, useTheme, Chip, IconButton,
+  Alert, alpha, Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
-import BarChartIcon from '@mui/icons-material/BarChart';
-import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
 import { useSpiritData } from '../hooks/useSpiritData';
@@ -35,7 +32,6 @@ export default function StoragePage() {
   } = useSpiritData();
   
   const [selectedLocation, setSelectedLocation] = useState<SpiritStorageLocation | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -343,3 +339,32 @@ export default function StoragePage() {
             )}
           </>
         )}
+        
+        {/* Modals */}
+        <AddStorageModal
+          open={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSuccess={() => {
+            setIsAddModalOpen(false);
+            setSuccess('Emplacement ajouté avec succès');
+            fetchStorageLocations();
+          }}
+        />
+        
+        {isEditModalOpen && selectedLocation && (
+          <AddStorageModal
+            open={isEditModalOpen}
+            initialData={selectedLocation}
+            onClose={() => setIsEditModalOpen(false)}
+            onSuccess={() => {
+              setIsEditModalOpen(false);
+              setSuccess('Emplacement mis à jour avec succès');
+              fetchStorageLocations();
+            }}
+          />
+        )}
+        
+      </Container>
+    </>
+  );
+}

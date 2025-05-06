@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { Spirit, SpiritType, SpiritFilter, SpiritStorageLocation } from '@/utils/types/spirit.types';
+import { Spirit, SpiritFilter, SpiritStorageLocation } from '@/utils/types/spirit.types';
 import { useNotifications } from '@/hooks/useNotifications';
 
 /**

@@ -11,15 +11,16 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  FormHelperText,
-  Divider,
+  // Suppression de FormHelperText non utilisé
+  // Suppression de Divider non utilisé
   Paper,
   Chip,
   CircularProgress,
   Alert,
   useTheme,
-  alpha,
-  Rating
+  // Suppression de alpha non utilisé
+  Rating,
+  SelectChangeEvent
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
@@ -112,7 +113,8 @@ const CocktailForm: React.FC<CocktailFormProps> = ({
   };
   
   // Gérer les changements de selects
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  // Corriger le type pour être compatible avec SelectChangeEvent de MUI
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (!name) return;
     
@@ -147,7 +149,7 @@ const CocktailForm: React.FC<CocktailFormProps> = ({
   };
   
   // Gérer le changement de note
-  const handleRatingChange = (_event: React.ChangeEvent<{}>, value: number | null) => {
+  const handleRatingChange = (_event: React.SyntheticEvent, value: number | null) => {
     setFormData(prev => ({
       ...prev,
       rating: value

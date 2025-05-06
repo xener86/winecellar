@@ -1,13 +1,13 @@
-// app/spirits/mixology/[id]/page.tsx
+// app/spirits/mixology/create/[id]/page.tsx
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Paper, CircularProgress, 
-  Button, useTheme, alpha, Chip, Divider, 
+  Button, useTheme, alpha, Chip, 
   Grid, Rating, List, ListItem, ListItemIcon, 
-  ListItemText, IconButton, Alert, Snackbar
+  ListItemText, IconButton, Alert
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EditIcon from '@mui/icons-material/Edit';
@@ -15,18 +15,15 @@ import FavoriteIcon from '@mui/icons-material/Favorite';
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import LocalBarIcon from '@mui/icons-material/LocalBar';
 import LiquorIcon from '@mui/icons-material/Liquor';
-import RestaurantIcon from '@mui/icons-material/Restaurant';
-import InfoIcon from '@mui/icons-material/Info';
-import ShareIcon from '@mui/icons-material/Share';
 import PrintIcon from '@mui/icons-material/Print';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useMixologyData } from '../../hooks/useMixologyData';
-import { useSpiritData } from '../../hooks/useSpiritData';
+import { useMixologyData } from '../../../hooks/useMixologyData';
+import { useSpiritData } from '../../../hooks/useSpiritData';
+import { Spirit } from '@/utils/types/spirit.types';
 import { useNotifications } from '@/hooks/useNotifications';
 
 // Types pour les paramètres de la page
@@ -53,8 +50,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
   } = useMixologyData();
   
   const { 
-    spirits, 
-    loading: spiritsLoading 
+    spirits 
   } = useSpiritData();
   
   const { showNotification } = useNotifications();
@@ -139,7 +135,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
   // Vérifier si un ingrédient est disponible dans la collection
   const isIngredientAvailable = (ingredientName: string): boolean => {
     // Vérifier dans la liste des spiritueux disponibles
-    return spirits.some(spirit => {
+    return spirits.some((spirit: Spirit) => {
       const ingredientLower = ingredientName.toLowerCase();
       const spiritNameLower = spirit.name.toLowerCase();
       const spiritTypeLower = spirit.type.toLowerCase();
@@ -290,7 +286,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
   
   // Obtenir l'ingrédient principal (premier spiritueux de la liste)
   const getMainSpirit = (): string => {
-    const mainIngredient = selectedCocktail.ingredients.find(i => {
+    const mainIngredient = selectedCocktail.ingredients.find((i: { name: string }) => {
       const name = i.name.toLowerCase();
       return (
         name.includes('whisky') || 
@@ -536,7 +532,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
               </Typography>
               
               <List>
-                {selectedCocktail.ingredients.map((ingredient, index) => (
+                {selectedCocktail.ingredients.map((ingredient: { id?: string; name: string; amount: number; unit: string; isOptional?: boolean }, index: number) => (
                   <ListItem 
                     key={ingredient.id || index}
                     sx={{ px: 0 }}
@@ -556,7 +552,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
                 ))}
               </List>
               
-              {selectedCocktail.ingredients.some(i => !isIngredientAvailable(i.name)) && (
+              {selectedCocktail.ingredients.some((i: { name: string }) => !isIngredientAvailable(i.name)) && (
                 <Alert 
                   severity="info" 
                   sx={{ mt: 2 }}
@@ -585,7 +581,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
               </Typography>
               
               <Box sx={{ whiteSpace: 'pre-line' }}>
-                {selectedCocktail.preparation.split('\n').map((step, i) => (
+                {selectedCocktail.preparation.split('\n').map((step: string, i: number) => (
                   <Typography key={i} paragraph>
                     {step}
                   </Typography>
@@ -623,7 +619,7 @@ export default function CocktailDetailsPage({ params }: PageProps) {
                 </Typography>
                 
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  {selectedCocktail.tags.map((tag, index) => (
+                  {selectedCocktail.tags.map((tag: string, index: number) => (
                     <Chip
                       key={index}
                       label={tag}
