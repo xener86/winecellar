@@ -17,8 +17,9 @@ import { useRouter } from 'next/navigation';
 import CrateCard from './components/CrateCard';
 import AddCrateModal from './components/AddCrateModal';
 import CrateDetailView from './components/CrateDetailView';
+import { Bottle, Wine } from '@/utils/types';
 
-// Types
+// Type spécifique pour la caisse, adapté pour correspondre à CrateData
 type Crate = {
   id: string;
   name: string;
@@ -26,30 +27,6 @@ type Crate = {
   bottles: Bottle[];
   created_at: string;
   user_id: string;
-};
-
-type Bottle = {
-  id: string;
-  wine_id: string;
-  crate_id: string | null;
-  position_id: string | null;
-  status: string;
-  acquisition_date: string | null;
-  consumption_date: string | null;
-  tasting_note: string | null;
-  wine?: Wine;
-  label?: string;
-};
-
-type Wine = {
-  id: string;
-  name: string;
-  color: string;
-  vintage: number | null;
-  domain: string | null;
-  region: string | null;
-  appellation: string | null;
-  alcohol_percentage: number | null;
 };
 
 export default function StockManagement() {
@@ -118,9 +95,74 @@ export default function StockManagement() {
 
           if (bottlesError) throw bottlesError;
 
+          // Traiter les résultats pour s'assurer qu'ils correspondent au type Bottle attendu
+          const processedBottles: Bottle[] = [];
+          
+          if (bottlesData) {
+            for (const rawBottle of bottlesData) {
+              // On utilise une approche très sécurisée pour traiter les données
+              const bottle: Bottle = {
+                id: rawBottle.id,
+                wine_id: rawBottle.wine_id,
+                position_id: rawBottle.position_id,
+                crate_id: rawBottle.crate_id,
+                status: rawBottle.status,
+                acquisition_date: rawBottle.acquisition_date,
+                consumption_date: rawBottle.consumption_date,
+                tasting_note: rawBottle.tasting_note,
+                label: rawBottle.label,
+                // Initialiser wine à undefined, nous le remplirons ensuite
+                wine: undefined
+              };
+              
+              // Traitement de wine séparément en fonction de sa structure
+              let wineData;
+              if (Array.isArray(rawBottle.wine)) {
+                // Si c'est un tableau, prendre le premier élément (ou null)
+                wineData = rawBottle.wine[0] || null;
+              } else {
+                // Sinon, utiliser directement l'objet
+                wineData = rawBottle.wine || null;
+              }
+              
+              // Si nous avons des données de vin, créer un objet Wine correctement typé
+              if (wineData) {
+                // Déterminer la couleur avec un type sécurisé
+                const colorMapping: Record<string, 'red' | 'white' | 'rose' | 'sparkling' | 'fortified'> = {
+                  'red': 'red',
+                  'white': 'white',
+                  'rose': 'rose',
+                  'sparkling': 'sparkling',
+                  'fortified': 'fortified'
+                };
+                
+                // Utiliser une couleur par défaut sûre si la couleur n'est pas reconnue
+                const color = typeof wineData.color === 'string' 
+                  ? (colorMapping[wineData.color] || 'red') 
+                  : 'red';
+                
+                const wine: Wine = {
+                  id: String(wineData.id || ''),
+                  name: String(wineData.name || ''),
+                  color: color,
+                  vintage: typeof wineData.vintage === 'number' ? wineData.vintage : null,
+                  region: wineData.region ? String(wineData.region) : null,
+                  domain: wineData.domain ? String(wineData.domain) : null,
+                  appellation: wineData.appellation ? String(wineData.appellation) : null,
+                  alcohol_percentage: typeof wineData.alcohol_percentage === 'number' ? wineData.alcohol_percentage : null
+                };
+                
+                // Assigner l'objet Wine à la bouteille
+                bottle.wine = wine;
+              }
+              
+              processedBottles.push(bottle);
+            }
+          }
+
           return {
             ...crate,
-            bottles: bottlesData || []
+            bottles: processedBottles
           };
         })
       );

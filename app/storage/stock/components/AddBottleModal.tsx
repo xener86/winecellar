@@ -27,13 +27,15 @@ import {
   ListItemText,
   Chip,
   IconButton,
-  InputAdornment
+  InputAdornment,
+  Fade
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import SearchIcon from '@mui/icons-material/Search';
 import WineBarIcon from '@mui/icons-material/WineBar';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import { supabase } from '../../../utils/supabase';
 
 // Types
@@ -150,6 +152,11 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
       fetchWines();
     }
   }, [open, tabIndex, fetchWines]);
+
+  // Console log pour déboguer la clé API
+  useEffect(() => {
+    console.log("État de apiKey:", apiKey ? "Disponible" : "Non disponible");
+  }, [apiKey]);
 
   // Fonction pour parser les données du vin depuis la réponse de l'IA
   const parseWineData = (aiResponse: string): WineData => {
@@ -317,6 +324,8 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
     setNewWineData(null);
     
     try {
+      console.log("Envoi de la requête à l'API OpenAI avec la clé:", apiKey ? "Disponible" : "Non disponible");
+      
       // Configuration de la requête API OpenAI
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -742,7 +751,7 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
           </Box>
         )}
 
-        {tabIndex === 1 && (
+{tabIndex === 1 && (
           // Onglet IA Sommelier
           <Box>
             <Typography variant="body2" paragraph>
@@ -791,127 +800,129 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
             )}
             
             {newWineData && (
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    {newWineData.name} {newWineData.vintage && `(${newWineData.vintage})`}
-                  </Typography>
-                  <Chip 
-                    label={getWineColorInfo(newWineData.color).label}
-                    sx={{ 
-                      bgcolor: getWineColorInfo(newWineData.color).bgColor,
-                      color: getWineColorInfo(newWineData.color).textColor,
-                    }}
-                  />
-                </Box>
-                
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                    <Box sx={{ minWidth: '200px', flex: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Domaine
-                      </Typography>
-                      <Typography variant="body1">
-                        {newWineData.domain || '-'}
-                      </Typography>
+              <Fade in={true}>
+                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Typography variant="h6" gutterBottom>
+                      {newWineData.name} {newWineData.vintage && `(${newWineData.vintage})`}
+                    </Typography>
+                    <Chip 
+                      label={getWineColorInfo(newWineData.color).label}
+                      sx={{ 
+                        bgcolor: getWineColorInfo(newWineData.color).bgColor,
+                        color: getWineColorInfo(newWineData.color).textColor,
+                      }}
+                    />
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                      <Box sx={{ minWidth: '200px', flex: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Domaine
+                        </Typography>
+                        <Typography variant="body1">
+                          {newWineData.domain || '-'}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ minWidth: '200px', flex: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          Région
+                        </Typography>
+                        <Typography variant="body1">
+                          {newWineData.region || '-'}
+                        </Typography>
+                      </Box>
                     </Box>
-                    <Box sx={{ minWidth: '200px', flex: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Région
-                      </Typography>
-                      <Typography variant="body1">
-                        {newWineData.region || '-'}
-                      </Typography>
+                    
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+                      {newWineData.appellation && (
+                        <Box sx={{ minWidth: '200px', flex: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Appellation
+                          </Typography>
+                          <Typography variant="body1">
+                            {newWineData.appellation}
+                          </Typography>
+                        </Box>
+                      )}
+                      {newWineData.alcohol_percentage && (
+                        <Box sx={{ minWidth: '200px', flex: 1 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Alcool
+                          </Typography>
+                          <Typography variant="body1">
+                            {newWineData.alcohol_percentage}%
+                          </Typography>
+                        </Box>
+                      )}
                     </Box>
                   </Box>
                   
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-                    {newWineData.appellation && (
-                      <Box sx={{ minWidth: '200px', flex: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Appellation
-                        </Typography>
-                        <Typography variant="body1">
-                          {newWineData.appellation}
-                        </Typography>
+                  {newWineData.grapes && newWineData.grapes.length > 0 && (
+                    <>
+                      <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
+                        Cépages
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {newWineData.grapes.map((grape, index) => (
+                          <Chip key={index} label={grape} size="small" variant="outlined" />
+                        ))}
                       </Box>
-                    )}
-                    {newWineData.alcohol_percentage && (
-                      <Box sx={{ minWidth: '200px', flex: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          Alcool
-                        </Typography>
-                        <Typography variant="body1">
-                          {newWineData.alcohol_percentage}%
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </Box>
-                
-                {newWineData.grapes && newWineData.grapes.length > 0 && (
-                  <>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 2, mb: 1 }}>
-                      Cépages
-                    </Typography>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {newWineData.grapes.map((grape, index) => (
-                        <Chip key={index} label={grape} size="small" variant="outlined" />
-                      ))}
-                    </Box>
-                  </>
-                )}
-                
-                <Box sx={{ mt: 2 }}>
-                  <Button
-                    size="small"
-                    variant="text"
-                    onClick={() => setPreviewExpanded(!previewExpanded)}
-                  >
-                    {previewExpanded ? 'Masquer les détails' : 'Voir plus de détails'}
-                  </Button>
-                </Box>
-                
-                {previewExpanded && (
+                    </>
+                  )}
+                  
                   <Box sx={{ mt: 2 }}>
-                    <Divider sx={{ mb: 2 }} />
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {newWineData.notes}
-                    </Typography>
+                    <Button
+                      size="small"
+                      variant="text"
+                      onClick={() => setPreviewExpanded(!previewExpanded)}
+                    >
+                      {previewExpanded ? 'Masquer les détails' : 'Voir plus de détails'}
+                    </Button>
                   </Box>
-                )}
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Typography variant="subtitle2" gutterBottom>
-                  Nombre de bouteilles à ajouter
-                </Typography>
-                
-                <Box display="flex" alignItems="center" gap={2} mb={2}>
-                  <Slider
-                    value={newWineQuantity}
-                    onChange={(_e, newValue) => setNewWineQuantity(newValue as number)}
-                    step={1}
-                    marks
-                    min={1}
-                    max={Math.min(availableSpace, 6)}
-                    valueLabelDisplay="auto"
-                    sx={{ flexGrow: 1 }}
-                  />
-                  <TextField
-                    type="number"
-                    value={newWineQuantity}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      if (val >= 1 && val <= Math.min(availableSpace, 6)) {
-                        setNewWineQuantity(val);
-                      }
-                    }}
-                    inputProps={{ min: 1, max: Math.min(availableSpace, 6) }}
-                    sx={{ width: 80 }}
-                  />
-                </Box>
-              </Paper>
+                  
+                  {previewExpanded && (
+                    <Box sx={{ mt: 2 }}>
+                      <Divider sx={{ mb: 2 }} />
+                      <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                        {newWineData.notes}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  <Divider sx={{ my: 2 }} />
+                  
+                  <Typography variant="subtitle2" gutterBottom>
+                    Nombre de bouteilles à ajouter
+                  </Typography>
+                  
+                  <Box display="flex" alignItems="center" gap={2} mb={2}>
+                    <Slider
+                      value={newWineQuantity}
+                      onChange={(_e, newValue) => setNewWineQuantity(newValue as number)}
+                      step={1}
+                      marks
+                      min={1}
+                      max={Math.min(availableSpace, 6)}
+                      valueLabelDisplay="auto"
+                      sx={{ flexGrow: 1 }}
+                    />
+                    <TextField
+                      type="number"
+                      value={newWineQuantity}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (val >= 1 && val <= Math.min(availableSpace, 6)) {
+                          setNewWineQuantity(val);
+                        }
+                      }}
+                      inputProps={{ min: 1, max: Math.min(availableSpace, 6) }}
+                      sx={{ width: 80 }}
+                    />
+                  </Box>
+                </Paper>
+              </Fade>
             )}
           </Box>
         )}
@@ -1061,6 +1072,7 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
             variant="contained"
             disabled={newWineLoading || !newWineData || newWineQuantity < 1 || newWineQuantity > availableSpace}
             sx={{ borderRadius: 2 }}
+            startIcon={newWineLoading ? undefined : <AddCircleOutlineIcon />}
           >
             {newWineLoading ? <CircularProgress size={24} color="inherit" /> : 
               newWineQuantity > 1 ? `Ajouter ${newWineQuantity} bouteilles` : 'Ajouter la bouteille'}
@@ -1073,6 +1085,7 @@ const AddBottleModal: React.FC<AddBottleModalProps> = ({
             variant="contained"
             disabled={loading || !newWine.name || manualWineQuantity < 1 || manualWineQuantity > availableSpace}
             sx={{ borderRadius: 2 }}
+            startIcon={loading ? undefined : <AddCircleOutlineIcon />}
           >
             {loading ? <CircularProgress size={24} color="inherit" /> : 
               manualWineQuantity > 1 ? `Ajouter ${manualWineQuantity} bouteilles` : 'Ajouter la bouteille'}

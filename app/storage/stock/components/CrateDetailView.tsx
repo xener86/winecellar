@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Dialog, DialogTitle, DialogContent, DialogActions, 
   Button, Typography, Box, Divider,
   Paper, IconButton, Tooltip, Chip, useTheme,
-  Grid, Card, CardContent, CardActions
+  Grid, Card, CardContent, CardActions, Alert
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -13,30 +13,10 @@ import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { supabase } from '../../../utils/supabase';
 import AddBottleModal from './AddBottleModal';
+import TransferBottleDialog from './TransferBottleDialog';
+import { Bottle } from '@/utils/types';
 
-// Types
-type Wine = {
-  id: string;
-  name?: string | null;
-  color?: string | null;
-  vintage?: number | null;
-  domain?: string | null;
-  region?: string | null;
-};
-
-type Bottle = {
-  id: string;
-  wine_id: string;
-  position_id?: string | null;
-  crate_id?: string | null;
-  status?: string;
-  acquisition_date?: string | null;
-  consumption_date?: string | null;
-  tasting_note?: string | null;
-  label?: string | null;
-  wine?: Wine | null; 
-};
-
+// Type spécifique pour ce composant
 type CrateData = {
   id: string; 
   name: string;
@@ -46,27 +26,68 @@ type CrateData = {
 
 type CrateDetailViewProps = {
   crate: CrateData;
-  open: boolean; // Ajout d'une prop open pour contrôler l'état
+  open: boolean;
   onClose: () => void;
   onRefresh: () => void;
 };
 
 const CrateDetailView: React.FC<CrateDetailViewProps> = ({ 
   crate, 
-  open, // Utiliser cette prop pour contrôler l'état de Dialog
+  open, 
   onClose, 
   onRefresh 
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  
+  // États
   const [isAddBottleModalOpen, setIsAddBottleModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [selectedBottle, setSelectedBottle] = useState<Bottle | null>(null);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
+  // Récupération de la clé API
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      if (!open) return;
+      
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) return;
+        
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('openai_api_key, mistral_api_key')
+          .eq('user_id', user.id)
+          .single();
+        
+        if (error && error.code !== 'PGRST116') {
+          console.error('Erreur récupération clés API:', error);
+          return;
+        }
+        
+        if (data?.openai_api_key) {
+          setApiKey(data.openai_api_key);
+        } else if (data?.mistral_api_key) {
+          setApiKey(data.mistral_api_key);
+        }
+      } catch (error) {
+        console.error('Erreur fetchAPIKeys:', error);
+      }
+    };
+    
+    fetchApiKey();
+  }, [open]);
   
   // Fonction pour supprimer une bouteille
   const handleRemoveBottle = async (bottleId: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette bouteille ?')) return;
     
     setLoading(true);
+    setErrorMessage(null);
+    
     try {
       const { error } = await supabase
         .from('bottle')
@@ -77,7 +98,7 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
       onRefresh();
     } catch (error: unknown) { 
       console.error('Erreur suppression bouteille:', error);
-      alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
+      setErrorMessage(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
     } finally {
       setLoading(false);
     }
@@ -88,6 +109,8 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
     if (!window.confirm('Marquer cette bouteille comme consommée ?')) return;
     
     setLoading(true);
+    setErrorMessage(null);
+    
     try {
       const { error } = await supabase
         .from('bottle')
@@ -103,7 +126,7 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
       onRefresh();
     } catch (error: unknown) {
       console.error('Erreur consommation bouteille:', error);
-      alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
+      setErrorMessage(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
     } finally {
       setLoading(false);
     }
@@ -114,6 +137,8 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
     if (!window.confirm('Marquer cette bouteille comme offerte ?')) return;
     
     setLoading(true);
+    setErrorMessage(null);
+    
     try {
       const { error } = await supabase
         .from('bottle')
@@ -128,15 +153,16 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
       onRefresh();
     } catch (error: unknown) { 
       console.error('Erreur statut offert:', error);
-      alert(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
+      setErrorMessage(`Erreur: ${error instanceof Error ? error.message : 'Une erreur est survenue'}`);
     } finally {
       setLoading(false);
     }
   };
   
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const handleTransferToShelf = async (_bottleId: string) => { 
-    alert('Fonctionnalité de transfert vers étagère à implémenter');
+  // Fonction pour transférer une bouteille vers une étagère
+  const handleTransferToShelf = (bottle: Bottle) => {
+    setSelectedBottle(bottle);
+    setIsTransferDialogOpen(true);
   };
   
   // Fonction pour ajouter une bouteille à la caisse
@@ -164,16 +190,26 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
             'Inconnu';
   };
   
+  // Obtenir la couleur du texte en fonction du fond
+  const getTextColorForBackground = (color: string | null | undefined): string => {
+    return color === 'red' || color === 'fortified' ? 'white' : 'black';
+  };
+  
   // Gestion de la fermeture du modal
   const handleDialogClose = () => {
-    // Appeler onClose pour informer le composant parent
     onClose();
+  };
+  
+  // Gestion de la fin du transfert
+  const handleTransferComplete = () => {
+    setIsTransferDialogOpen(false);
+    onRefresh();
   };
   
   return (
     <Dialog 
-      open={open} // Utiliser la prop open ici au lieu de true
-      onClose={handleDialogClose} // Utiliser notre fonction de gestion
+      open={open}
+      onClose={handleDialogClose}
       fullWidth
       maxWidth="md"
       PaperProps={{ sx: { borderRadius: 2, bgcolor: isDarkMode ? '#1A1A1A' : 'white', overflow: 'hidden' } }}
@@ -207,6 +243,12 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
         
         <Divider sx={{ mb: 3 }} />
         
+        {errorMessage && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {errorMessage}
+          </Alert>
+        )}
+        
         {!crate || crate.bottles?.length === 0 ? ( 
           <Paper sx={{ p: 3, textAlign: 'center' }}> 
              <Typography>Cette caisse est vide. Ajoutez des bouteilles pour commencer.</Typography>
@@ -229,14 +271,14 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
                           position: 'relative',
                           mr: 2,
                           bgcolor: getWineColorCode(bottle.wine?.color), 
+                          color: getTextColorForBackground(bottle.wine?.color)
                         }}
                       >
                         {bottle.wine?.vintage && (
                           <Typography 
                             variant="caption"
                             sx={{ 
-                              fontWeight: 'bold',
-                              color: bottle.wine?.color === 'red' || bottle.wine?.color === 'fortified' ? 'white' : 'black',
+                              fontWeight: 'bold'
                             }}
                           >
                             {bottle.wine.vintage}
@@ -255,9 +297,30 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
                             size="small"
                             sx={{ 
                               bgcolor: getWineColorCode(bottle.wine?.color),
-                              color: bottle.wine?.color === 'red' || bottle.wine?.color === 'fortified' ? 'white' : 'black',
+                              color: getTextColorForBackground(bottle.wine?.color),
                             }}
                           />
+                          
+                          {bottle.label && (
+                            <Chip
+                              label={
+                                bottle.label === 'favorite' ? 'Coup de cœur' :
+                                bottle.label === 'special' ? 'Occasion spéciale' :
+                                bottle.label === 'keep' ? 'À garder' :
+                                bottle.label === 'aperitif' ? 'Apéritif' :
+                                bottle.label === 'ready' ? 'Prêt à boire' : bottle.label
+                              }
+                              size="small"
+                              variant="outlined"
+                              color={
+                                bottle.label === 'favorite' ? 'error' :
+                                bottle.label === 'special' ? 'secondary' :
+                                bottle.label === 'keep' ? 'primary' :
+                                bottle.label === 'aperitif' ? 'warning' :
+                                bottle.label === 'ready' ? 'success' : 'default'
+                              }
+                            />
+                          )}
                         </Box>
                         
                         {bottle.wine?.domain && (
@@ -279,23 +342,38 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
                   <CardActions sx={{ pt: 0, pb: 1, px: 2, justifyContent: 'space-between' }}>
                     <Box display="flex">
                       <Tooltip title="Transférer vers étagère">
-                        <IconButton size="small" onClick={() => handleTransferToShelf(bottle.id)} sx={{ mr: 0.5 }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleTransferToShelf(bottle)} 
+                          sx={{ mr: 0.5 }}
+                        >
                           <ArrowForwardIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Consommée">
-                        <IconButton size="small" onClick={() => handleConsumeBottle(bottle.id)} sx={{ mr: 0.5 }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleConsumeBottle(bottle.id)} 
+                          sx={{ mr: 0.5 }}
+                        >
                           <RestaurantIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Offerte">
-                        <IconButton size="small" onClick={() => handleGiftBottle(bottle.id)} sx={{ mr: 0.5 }}>
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleGiftBottle(bottle.id)} 
+                          sx={{ mr: 0.5 }}
+                        >
                           <CardGiftcardIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </Box>
                     <Tooltip title="Supprimer">
-                      <IconButton size="small" onClick={() => handleRemoveBottle(bottle.id)}>
+                      <IconButton 
+                        size="small" 
+                        onClick={() => handleRemoveBottle(bottle.id)}
+                      >
                         <DeleteIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -305,17 +383,6 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
             ))}
           </Grid>
         )}
-        
-        {/* Modal pour ajouter une bouteille */}
-        <AddBottleModal 
-          open={isAddBottleModalOpen}
-          onClose={() => setIsAddBottleModalOpen(false)}
-          crateId={crate?.id} 
-          onBottleAdded={() => { 
-             setIsAddBottleModalOpen(false);
-             onRefresh();
-           }}
-        />
       </DialogContent>
       
       <DialogActions sx={{ px: 3, pb: 3 }}>
@@ -323,6 +390,34 @@ const CrateDetailView: React.FC<CrateDetailViewProps> = ({
           Fermer
         </Button>
       </DialogActions>
+      
+      {/* Modals et dialogs */}
+      <AddBottleModal 
+        open={isAddBottleModalOpen}
+        onClose={() => setIsAddBottleModalOpen(false)}
+        crateId={crate?.id}
+        apiKey={apiKey}
+        currentCapacity={crate?.bottles?.length || 0}
+        maxCapacity={crate?.capacity || 6}
+        onBottleAdded={() => { 
+          setIsAddBottleModalOpen(false);
+          onRefresh();
+        }}
+      />
+      
+      {selectedBottle && (
+        <TransferBottleDialog
+          open={isTransferDialogOpen}
+          onClose={() => setIsTransferDialogOpen(false)}
+          bottle={{
+            ...selectedBottle,
+            // Assurons-nous que tous les champs correspondent au type attendu par TransferBottleDialog
+            crate_id: selectedBottle.crate_id ?? null,
+            position_id: selectedBottle.position_id ?? null
+          }}
+          onTransferComplete={handleTransferComplete}
+        />
+      )}
     </Dialog>
   );
 };

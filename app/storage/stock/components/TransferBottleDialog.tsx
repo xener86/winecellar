@@ -25,47 +25,12 @@ import CloseIcon from '@mui/icons-material/Close';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import WineBarIcon from '@mui/icons-material/WineBar';
 import { supabase } from '../../../utils/supabase';
-
-// Types
-interface Wine {
-  id: string;
-  name: string;
-  color: 'red' | 'white' | 'rose' | 'sparkling' | 'fortified';
-  vintage?: number | null;
-  domain?: string | null;
-  region?: string | null;
-  appellation?: string | null;
-}
-
-interface Bottle {
-  id: string;
-  wine_id: string;
-  crate_id: string | null;
-  position_id: string | null;
-  status: string;
-  wine?: Wine | null;
-}
-
-interface StorageLocation {
-  id: string;
-  name: string;
-  type: string;
-  row_count: number | null;
-  column_count: number | null;
-}
-
-interface Position {
-  id: string;
-  storage_location_id: string;
-  row_position: number;
-  column_position: number;
-  is_occupied?: boolean;
-}
+import { Bottle, Position, StorageLocation } from '@/utils/types';
 
 interface TransferBottleDialogProps {
   open: boolean;
   onClose: () => void;
-  bottle: Bottle | null;
+  bottle: Bottle;
   onTransferComplete: () => void;
 }
 
@@ -396,7 +361,7 @@ const TransferBottleDialog: React.FC<TransferBottleDialogProps> = ({
       </DialogContent>
       
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={handleClose} sx={{ borderRadius: 2 }} disabled={loading}>
+      <Button onClick={handleClose} sx={{ borderRadius: 2 }} disabled={loading}>
           Annuler
         </Button>
         <Button
