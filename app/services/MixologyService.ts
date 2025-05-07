@@ -1,307 +1,247 @@
-// app/spirits/hooks/useMixologyData.ts
+// app/services/MixologyService.ts
 
-import { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/utils/supabase';
-import { useNotifications } from '@/hooks/useNotifications';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { 
   Cocktail, 
   CocktailSuggestion, 
   CocktailFilter 
 } from '@/utils/types/cocktail.types';
 import { Spirit } from '@/utils/types/spirit.types';
-import MixologyService from '@/services/MixologyService';
 import SpiritAIService from '@/services/SpiritAIService';
 
-/**
- * Hook personnalisé pour gérer les données de mixologie
- */
-export const useMixologyData = () => {
-  const router = useRouter();
-  const { showNotification } = useNotifications();
-  
-  // États
-  const [cocktails, setCocktails] = useState<Cocktail[]>([]);
-  const [suggestions, setSuggestions] = useState<CocktailSuggestion[]>([]);
-  const [selectedCocktail, setSelectedCocktail] = useState<Cocktail | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [cocktailLoading, setCocktailLoading] = useState(false);
-  const [service, setService] = useState<MixologyService | null>(null);
-  
-  // Initialisation du service de mixologie
-  useEffect(() => {
-    const initService = async () => {
-      try {
-        // Récupérer la clé API pour le service IA
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) return;
-        
-        const { data, error } = await supabase
-          .from('user_preferences')
-          .select('openai_api_key, mistral_api_key')
-          .eq('user_id', user.id)
-          .single();
-        
-        if (error && error.code !== 'PGRST116') {
-          console.error('Erreur récupération clés API:', error);
-          return;
-        }
-        
-        let aiService: SpiritAIService | undefined;
-        
-        // Initialiser le service AI si une clé API est disponible
-        if (data?.openai_api_key) {
-          aiService = new SpiritAIService({
-            apiKey: data.openai_api_key,
-            apiProvider: 'openai'
-          });
-        } else if (data?.mistral_api_key) {
-          aiService = new SpiritAIService({
-            apiKey: data.mistral_api_key,
-            apiProvider: 'mistral'
-          });
-        }
-        
-        // Initialiser le service de mixologie
-        const mixologyService = new MixologyService(supabase, aiService);
-        setService(mixologyService);
-      } catch (error) {
-        console.error('Error initializing mixology service:', error);
+// Interface for MixologyService
+export interface IMixologyService {
+  getCocktails(userId: string, filter?: CocktailFilter): Promise<Cocktail[]>;
+  suggestCocktailsFromCollection(spirits: Spirit[]): Promise<CocktailSuggestion[]>;
+  saveCocktail(cocktailData: Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, userId: string): Promise<string>;
+  updateCocktail(id: string, updates: Partial<Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>): Promise<void>;
+  deleteCocktail(id: string): Promise<void>;
+  generateCocktailWithAI(ingredients: string[]): Promise<Partial<Cocktail> | null>;
+  getCocktailsForSpirit(spirit: Spirit, userId: string): Promise<Cocktail[]>;
+}
+
+class MixologyService implements IMixologyService {
+  private supabase: SupabaseClient;
+  private aiService?: SpiritAIService;
+
+  constructor(supabaseClient: SupabaseClient, aiService?: SpiritAIService) {
+    this.supabase = supabaseClient;
+    this.aiService = aiService;
+  }
+
+  /**
+   * Récupère les cocktails de l'utilisateur
+   * @param userId ID de l'utilisateur
+   * @param filter Options de filtrage
+   * @returns Liste de cocktails
+   */
+  async getCocktails(userId: string, filter?: CocktailFilter): Promise<Cocktail[]> {
+    // Construire la requête de base
+    let query = this.supabase
+      .from('cocktails')
+      .select('*')
+      .eq('user_id', userId);
+    
+    // Appliquer les filtres si présents
+    if (filter) {
+      if (filter.categories && filter.categories.length > 0) {
+        query = query.in('category', filter.categories);
       }
+      
+      if (filter.difficulty && filter.difficulty.length > 0) {
+        query = query.in('difficulty', filter.difficulty);
+      }
+      
+      if (filter.searchTerm) {
+        query = query.or(
+          `name.ilike.%${filter.searchTerm}%,category.ilike.%${filter.searchTerm}%`
+        );
+      }
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Transformer les données pour le format attendu
+    const formattedCocktails = data.map((item): Cocktail => ({
+      id: item.id,
+      name: item.name,
+      category: item.category,
+      glassType: item.glass_type,
+      ingredients: item.ingredients || [],
+      garnish: item.garnish,
+      preparation: item.preparation,
+      preparationMethod: item.preparation_method,
+      image: item.image,
+      isCustom: item.is_custom,
+      isFavorite: item.is_favorite,
+      notes: item.notes,
+      tags: item.tags,
+      rating: item.rating,
+      difficulty: item.difficulty,
+      userId: item.user_id,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    }));
+    
+    return formattedCocktails;
+  }
+
+  /**
+   * Génère des suggestions de cocktails basées sur les spiritueux disponibles
+   * @param spirits Liste de spiritueux
+   * @returns Liste de suggestions
+   */
+  async suggestCocktailsFromCollection(spirits: Spirit[]): Promise<CocktailSuggestion[]> {
+    // Pour l'instant, retourne une liste vide
+    // Cette méthode sera implémentée ultérieurement
+    console.log(`Suggestion basée sur ${spirits.length} spiritueux`);
+    return [];
+  }
+
+  /**
+   * Sauvegarde un nouveau cocktail
+   * @param cocktailData Données du cocktail
+   * @param userId ID de l'utilisateur
+   * @returns ID du cocktail créé
+   */
+  async saveCocktail(
+    cocktailData: Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>, 
+    userId: string
+  ): Promise<string> {
+    const now = new Date().toISOString();
+    
+    // Transformer les données pour le format de la base de données
+    const dbCocktailData = {
+      name: cocktailData.name,
+      category: cocktailData.category,
+      glass_type: cocktailData.glassType,
+      ingredients: cocktailData.ingredients,
+      garnish: cocktailData.garnish,
+      preparation: cocktailData.preparation,
+      preparation_method: cocktailData.preparationMethod,
+      image: cocktailData.image,
+      is_custom: cocktailData.isCustom,
+      is_favorite: cocktailData.isFavorite,
+      notes: cocktailData.notes,
+      tags: cocktailData.tags,
+      rating: cocktailData.rating,
+      difficulty: cocktailData.difficulty,
+      user_id: userId,
+      created_at: now,
+      updated_at: now
     };
     
-    initService();
-  }, []);
-  
-  /**
-   * Récupère tous les cocktails de l'utilisateur
-   * @param filter Options de filtrage
-   */
-  const fetchCocktails = useCallback(async (filter?: CocktailFilter) => {
-    if (!service) return;
+    const { data, error } = await this.supabase
+      .from('cocktails')
+      .insert(dbCocktailData)
+      .select()
+      .single();
     
-    setLoading(true);
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        router.push('/login');
-        setLoading(false);
-        return;
-      }
-      
-      const data = await service.getCocktails(user.id, filter);
-      setCocktails(data);
-    } catch (error: unknown) {
-      console.error('Exception fetchCocktails:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur chargement cocktails'}`,
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [service, router, showNotification]);
-  
-  /**
-   * Génère des suggestions de cocktails basées sur la collection de spiritueux
-   * @param spirits Collection de spiritueux
-   */
-  const generateSuggestions = useCallback(async (spirits: Spirit[]) => {
-    if (!service) return;
+    if (error) throw error;
     
-    setLoading(true);
-    try {
-      const suggestions = await service.suggestCocktailsFromCollection(spirits);
-      setSuggestions(suggestions);
-    } catch (error: unknown) {
-      console.error('Exception generateSuggestions:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur génération suggestions'}`,
-        'error'
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [service, showNotification]);
-  
-  /**
-   * Crée un nouveau cocktail
-   * @param cocktailData Données du cocktail
-   */
-  const createCocktail = useCallback(async (cocktailData: Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => {
-    if (!service) return null;
-    
-    setCocktailLoading(true);
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        router.push('/login');
-        setCocktailLoading(false);
-        return null;
-      }
-      
-      const cocktailId = await service.saveCocktail(cocktailData, user.id);
-      
-      // Actualiser la liste des cocktails
-      fetchCocktails();
-      
-      showNotification('Cocktail créé avec succès', 'success');
-      setCocktailLoading(false);
-      return cocktailId;
-    } catch (error: unknown) {
-      console.error('Exception createCocktail:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur création cocktail'}`,
-        'error'
-      );
-      setCocktailLoading(false);
-      return null;
-    }
-  }, [service, router, showNotification, fetchCocktails]);
-  
+    return data.id;
+  }
+
   /**
    * Met à jour un cocktail existant
    * @param id ID du cocktail
    * @param updates Modifications à appliquer
    */
-  const updateCocktail = useCallback(async (id: string, updates: Partial<Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>) => {
-    if (!service) return false;
+  async updateCocktail(
+    id: string, 
+    updates: Partial<Omit<Cocktail, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
+  ): Promise<void> {
+    const now = new Date().toISOString();
     
-    setCocktailLoading(true);
-    try {
-      await service.updateCocktail(id, updates);
-      
-      // Mettre à jour l'état local
-      setCocktails(prev => prev.map(c => c.id === id ? { ...c, ...updates } : c));
-      
-      // Mettre à jour le cocktail sélectionné si nécessaire
-      if (selectedCocktail?.id === id) {
-        setSelectedCocktail(prev => prev ? { ...prev, ...updates } : null);
-      }
-      
-      showNotification('Cocktail mis à jour avec succès', 'success');
-      setCocktailLoading(false);
-      return true;
-    } catch (error: unknown) {
-      console.error('Exception updateCocktail:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur mise à jour cocktail'}`,
-        'error'
-      );
-      setCocktailLoading(false);
-      return false;
-    }
-  }, [service, showNotification, selectedCocktail]);
-  
+    // Transformer les données pour le format de la base de données
+    const dbUpdates: Record<string, unknown> = {
+      updated_at: now
+    };
+    
+    // Mapper les propriétés
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.category !== undefined) dbUpdates.category = updates.category;
+    if (updates.glassType !== undefined) dbUpdates.glass_type = updates.glassType;
+    if (updates.ingredients !== undefined) dbUpdates.ingredients = updates.ingredients;
+    if (updates.garnish !== undefined) dbUpdates.garnish = updates.garnish;
+    if (updates.preparation !== undefined) dbUpdates.preparation = updates.preparation;
+    if (updates.preparationMethod !== undefined) dbUpdates.preparation_method = updates.preparationMethod;
+    if (updates.image !== undefined) dbUpdates.image = updates.image;
+    if (updates.isCustom !== undefined) dbUpdates.is_custom = updates.isCustom;
+    if (updates.isFavorite !== undefined) dbUpdates.is_favorite = updates.isFavorite;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.tags !== undefined) dbUpdates.tags = updates.tags;
+    if (updates.rating !== undefined) dbUpdates.rating = updates.rating;
+    if (updates.difficulty !== undefined) dbUpdates.difficulty = updates.difficulty;
+    
+    const { error } = await this.supabase
+      .from('cocktails')
+      .update(dbUpdates)
+      .eq('id', id);
+    
+    if (error) throw error;
+  }
+
   /**
    * Supprime un cocktail
    * @param id ID du cocktail
    */
-  const deleteCocktail = useCallback(async (id: string) => {
-    if (!service) return false;
+  async deleteCocktail(id: string): Promise<void> {
+    const { error } = await this.supabase
+      .from('cocktails')
+      .delete()
+      .eq('id', id);
     
-    try {
-      // Confirmation de suppression
-      const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer ce cocktail ?");
-      if (!confirmDelete) return false;
-      
-      await service.deleteCocktail(id);
-      
-      // Mettre à jour l'état local
-      setCocktails(prev => prev.filter(c => c.id !== id));
-      
-      // Réinitialiser le cocktail sélectionné si nécessaire
-      if (selectedCocktail?.id === id) {
-        setSelectedCocktail(null);
-      }
-      
-      showNotification('Cocktail supprimé avec succès', 'success');
-      return true;
-    } catch (error: unknown) {
-      console.error('Exception deleteCocktail:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur suppression cocktail'}`,
-        'error'
-      );
-      return false;
-    }
-  }, [service, showNotification, selectedCocktail]);
-  
+    if (error) throw error;
+  }
+
   /**
    * Génère un cocktail avec l'IA
-   * @param ingredients Liste d'ingrédients disponibles
+   * @param ingredients Liste d'ingrédients
+   * @returns Données du cocktail généré
    */
-  const generateCocktailWithAI = useCallback(async (ingredients: string[]) => {
-    if (!service) return null;
-    
-    setCocktailLoading(true);
-    try {
-      const cocktailData = await service.generateCocktailWithAI(ingredients);
-      setCocktailLoading(false);
-      return cocktailData;
-    } catch (error: unknown) {
-      console.error('Exception generateCocktailWithAI:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur génération cocktail'}`,
-        'error'
-      );
-      setCocktailLoading(false);
-      return null;
-    }
-  }, [service, showNotification]);
-  
+  async generateCocktailWithAI(ingredients: string[]): Promise<Partial<Cocktail> | null> {
+    // Cette fonctionnalité nécessite l'implémentation du service AI
+    // Pour l'instant, retourne null
+    console.log(`Génération d'un cocktail avec ${ingredients.length} ingrédients`);
+    return null;
+  }
+
   /**
-   * Récupère les cocktails pour un spiritueux spécifique
-   * @param spirit Spiritueux
+   * Récupère les cocktails utilisant un spiritueux spécifique
+   * @param spirit Le spiritueux
+   * @param userId ID de l'utilisateur
+   * @returns Liste de cocktails
    */
-  const getCocktailsForSpirit = useCallback(async (spirit: Spirit) => {
-    if (!service) return [];
-    
-    setLoading(true);
+  async getCocktailsForSpirit(spirit: Spirit, userId: string): Promise<Cocktail[]> {
+    // Appeler l'API pour récupérer les cocktails
     try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        router.push('/login');
-        setLoading(false);
-        return [];
+      console.log(`Recherche de cocktails pour l'utilisateur ${userId}`);
+      
+      const response = await fetch('/api/cocktails/by-spirit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          spiritId: spirit.id,
+          spiritType: spirit.type
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
       }
       
-      const data = await service.getCocktailsForSpirit(spirit, user.id);
-      setLoading(false);
-      return data;
-    } catch (error: unknown) {
-      console.error('Exception getCocktailsForSpirit:', error);
-      showNotification(
-        `Erreur: ${error instanceof Error ? error.message : 'Erreur chargement cocktails'}`,
-        'error'
-      );
-      setLoading(false);
-      return [];
+      const data = await response.json();
+      return data as Cocktail[];
+    } catch (error) {
+      console.error('Erreur récupération cocktails pour spiritueux:', error);
+      throw error;
     }
-  }, [service, router, showNotification]);
-  
-  // Effet pour charger les cocktails au démarrage
-  useEffect(() => {
-    if (service) {
-      fetchCocktails();
-    }
-  }, [service, fetchCocktails]);
-  
-  return {
-    cocktails,
-    suggestions,
-    selectedCocktail,
-    setSelectedCocktail,
-    loading,
-    cocktailLoading,
-    fetchCocktails,
-    generateSuggestions,
-    createCocktail,
-    updateCocktail,
-    deleteCocktail,
-    generateCocktailWithAI,
-    getCocktailsForSpirit
-  };
-};
+  }
+}
 
-export default useMixologyData;
+export default MixologyService;

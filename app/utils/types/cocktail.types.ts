@@ -4,7 +4,6 @@
  * Types pour le module de mixologie
  */
 
-import { Spirit } from './spirit.types';
 
 // Type de verre à cocktail
 export type GlassType = 

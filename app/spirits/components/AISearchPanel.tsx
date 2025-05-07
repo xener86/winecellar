@@ -25,14 +25,12 @@ interface AISearchPanelProps {
   onSpiritFound: (spirit: Partial<Spirit>) => void;
   apiKey?: string;
   language?: 'fr' | 'en';
-  provider?: 'openai' | 'mistral';
 }
 
 const AISearchPanel: React.FC<AISearchPanelProps> = ({
   onSpiritFound,
   apiKey = '',
-  language = 'fr',
-  provider = 'openai'
+  language = 'fr'
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -90,7 +88,7 @@ const AISearchPanel: React.FC<AISearchPanelProps> = ({
     try {
       const aiService = new SpiritAIService({
         apiKey,
-        apiProvider: provider,
+        apiProvider: 'openai',
         language
       });
       

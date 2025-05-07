@@ -213,10 +213,11 @@ class SpiritAIService {
    * (Fonctionnalité future - non implémentée)
    * @param _imageUrl URL de l'image à analyser (préfixé avec _ car non utilisé)
    */
-  async analyzeBottleImage(_imageUrl: string): Promise<Partial<Spirit>> {
-    // Future implémentation pour l'analyse d'image
-    throw new Error('Image analysis not implemented yet');
-  }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async analyzeBottleImage(_imageUrl: string): Promise<Partial<Spirit>> {
+  // Future implémentation pour l'analyse d'image
+  throw new Error('Image analysis not implemented yet');
+}
 }
 
 export default SpiritAIService;

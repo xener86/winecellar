@@ -1,7 +1,7 @@
 // app/utils/types/api.types.ts
 
 import { Spirit, SpiritType } from './spirit.types';
-import { Cocktail, CocktailCategory, GlassType, PreparationMethod } from './cocktail.types';
+import { Cocktail, CocktailCategory } from './cocktail.types';
 
 // Types pour les requêtes API
 

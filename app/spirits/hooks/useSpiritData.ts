@@ -3,7 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/utils/supabase';
-import { Spirit, SpiritFilter, SpiritStorageLocation } from '@/utils/types/spirit.types';
+import { Spirit, SpiritFilter, SpiritType, SpiritStorageLocation, FillLevel } from '@/utils/types/spirit.types';
 import { useNotifications } from '@/hooks/useNotifications';
 
 // Interfaces pour les données en snake_case provenant de Supabase
@@ -113,7 +113,7 @@ export const useSpiritData = () => {
       let query = supabase
         .from('spirits')
         .select('*')
-        .eq('user_id', user.id); // Utilisation de snake_case
+        .eq('user_id', user.id);
       
       // Appliquer les filtres si présents
       if (filter) {
@@ -148,15 +148,16 @@ export const useSpiritData = () => {
         }
         
         if (filter.tags && filter.tags.length > 0) {
-          // Recherche sur un tableau de tags
           query = query.contains('custom_tags', filter.tags);
         }
       }
       
-      // Utiliser la syntaxe correcte pour l'ordre
       const { data, error } = await query.order('created_at', { ascending: false });
       
       if (error) throw error;
+      
+      // Liste des niveaux de remplissage valides pour conversion
+      const validFillLevels: FillLevel[] = ['full', 'threeFourths', 'half', 'oneFourth', 'empty'];
       
       // Convertir les données de snake_case à camelCase
       const typedSpirits: Spirit[] = (data || []).map((item: DbSpirit) => {
@@ -171,21 +172,49 @@ export const useSpiritData = () => {
         if (typeof acquisition === 'string') acquisition = JSON.parse(acquisition);
         if (typeof storage === 'string') storage = JSON.parse(storage);
         
-        // S'assurer que toutes les propriétés correspondent exactement au type Spirit
+        // Assurer que la date d'acquisition est toujours une chaîne valide
+        const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+        
+        // Vérifier et convertir le niveau de remplissage
+        const fillLevel: FillLevel = validFillLevels.includes(storage.fillLevel as FillLevel)
+          ? (storage.fillLevel as FillLevel)
+          : 'full';
+        
+        // Retourner l'objet correctement formaté
         return {
           id: item.id,
           name: item.name,
-          type: item.type as Spirit['type'],
+          type: item.type as SpiritType,
           subType: item.sub_type,
-          // Garantir que volume est un nombre (utiliser 0 comme valeur par défaut si null)
           abv: item.abv,
           volume: item.volume ?? 0,
-          origin,
+          origin: {
+            country: origin.country || '',
+            region: origin.region || null,
+            distillery: origin.distillery || null
+          },
           age: item.age,
           vintage: item.vintage,
-          details,
-          acquisition,
-          storage,
+          details: {
+            color: details.color || null,
+            finish: details.finish || null,
+            tastingNotes: details.tastingNotes || null,
+            ingredients: details.ingredients || null
+          },
+          acquisition: {
+            date: acquisition.date || today, // Utiliser aujourd'hui si null
+            price: acquisition.price || null,
+            store: acquisition.store || null
+          },
+          storage: {
+            locationId: storage.locationId || null,
+            position: {
+              id: storage.position?.id || null,
+              row: storage.position?.row || null,
+              column: storage.position?.column || null
+            },
+            fillLevel: fillLevel
+          },
           bottleImage: item.bottle_image,
           notes: item.notes,
           customTags: item.custom_tags,
@@ -279,8 +308,14 @@ export const useSpiritData = () => {
         age: spirit.age,
         vintage: spirit.vintage,
         details: spirit.details,
-        acquisition: spirit.acquisition,
-        storage: spirit.storage,
+        acquisition: {
+          ...spirit.acquisition,
+          date: spirit.acquisition.date || now.split('T')[0] // S'assurer qu'il y a une date
+        },
+        storage: {
+          ...spirit.storage,
+          fillLevel: spirit.storage.fillLevel || 'full' // S'assurer qu'il y a un niveau
+        },
         bottle_image: spirit.bottleImage,
         notes: spirit.notes,
         custom_tags: spirit.customTags,
@@ -297,20 +332,41 @@ export const useSpiritData = () => {
       
       if (error) throw error;
       
-      // Convertir le résultat de snake_case à camelCase
+      // Convertir le résultat pour le format attendu
       const newSpirit: Spirit = {
         id: data.id,
         name: data.name,
-        type: data.type,
+        type: data.type as SpiritType,
         subType: data.sub_type,
         abv: data.abv,
-        volume: data.volume,
-        origin: data.origin,
+        volume: data.volume || 0,
+        origin: {
+          country: data.origin.country || '',
+          region: data.origin.region || null,
+          distillery: data.origin.distillery || null
+        },
         age: data.age,
         vintage: data.vintage,
-        details: data.details,
-        acquisition: data.acquisition,
-        storage: data.storage,
+        details: {
+          color: data.details.color || null,
+          finish: data.details.finish || null,
+          tastingNotes: data.details.tastingNotes || null,
+          ingredients: data.details.ingredients || null
+        },
+        acquisition: {
+          date: data.acquisition.date || now.split('T')[0],
+          price: data.acquisition.price || null,
+          store: data.acquisition.store || null
+        },
+        storage: {
+          locationId: data.storage.locationId || null,
+          position: {
+            id: data.storage.position?.id || null,
+            row: data.storage.position?.row || null,
+            column: data.storage.position?.column || null
+          },
+          fillLevel: data.storage.fillLevel as FillLevel || 'full'
+        },
         bottleImage: data.bottle_image,
         notes: data.notes,
         customTags: data.custom_tags,
@@ -360,8 +416,22 @@ export const useSpiritData = () => {
       if (updates.age !== undefined) processedUpdates.age = updates.age;
       if (updates.vintage !== undefined) processedUpdates.vintage = updates.vintage;
       if (updates.details !== undefined) processedUpdates.details = updates.details;
-      if (updates.acquisition !== undefined) processedUpdates.acquisition = updates.acquisition;
-      if (updates.storage !== undefined) processedUpdates.storage = updates.storage;
+      if (updates.acquisition !== undefined) {
+        // S'assurer que la date est une chaîne valide
+        const updatedAcquisition = { ...updates.acquisition };
+        if (!updatedAcquisition.date) {
+          updatedAcquisition.date = now.split('T')[0];
+        }
+        processedUpdates.acquisition = updatedAcquisition;
+      }
+      if (updates.storage !== undefined) {
+        // S'assurer que fillLevel est valide
+        const updatedStorage = { ...updates.storage };
+        if (!updatedStorage.fillLevel || !['full', 'threeFourths', 'half', 'oneFourth', 'empty'].includes(updatedStorage.fillLevel)) {
+          updatedStorage.fillLevel = 'full';
+        }
+        processedUpdates.storage = updatedStorage;
+      }
       if (updates.bottleImage !== undefined) processedUpdates.bottle_image = updates.bottleImage;
       if (updates.notes !== undefined) processedUpdates.notes = updates.notes;
       if (updates.customTags !== undefined) processedUpdates.custom_tags = updates.customTags;
@@ -379,16 +449,37 @@ export const useSpiritData = () => {
       const updatedSpirit: Spirit = {
         id: data.id,
         name: data.name,
-        type: data.type,
+        type: data.type as SpiritType,
         subType: data.sub_type,
         abv: data.abv,
-        volume: data.volume,
-        origin: data.origin,
+        volume: data.volume || 0,
+        origin: {
+          country: data.origin.country || '',
+          region: data.origin.region || null,
+          distillery: data.origin.distillery || null
+        },
         age: data.age,
         vintage: data.vintage,
-        details: data.details,
-        acquisition: data.acquisition,
-        storage: data.storage,
+        details: {
+          color: data.details.color || null,
+          finish: data.details.finish || null,
+          tastingNotes: data.details.tastingNotes || null,
+          ingredients: data.details.ingredients || null
+        },
+        acquisition: {
+          date: data.acquisition.date || now.split('T')[0],
+          price: data.acquisition.price || null,
+          store: data.acquisition.store || null
+        },
+        storage: {
+          locationId: data.storage.locationId || null,
+          position: {
+            id: data.storage.position?.id || null,
+            row: data.storage.position?.row || null,
+            column: data.storage.position?.column || null
+          },
+          fillLevel: data.storage.fillLevel as FillLevel || 'full'
+        },
         bottleImage: data.bottle_image,
         notes: data.notes,
         customTags: data.custom_tags,

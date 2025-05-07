@@ -20,22 +20,18 @@ import PrintIcon from '@mui/icons-material/Print';
 import WaterDropIcon from '@mui/icons-material/WaterDrop';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useSpiritData } from '../../hooks/useSpiritData';
 import { useMixologyData } from '../../hooks/useMixologyData';
 import { Cocktail } from '@/utils/types/cocktail.types';
 import CocktailCard from '../../components/CocktailCard';
 
-// Types pour les paramètres de la page
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function SpiritDetailsPage({ params }: PageProps) {
-  const { id } = params;
+export default function SpiritDetailsPage() {
+  // Utiliser useParams pour obtenir l'ID directement
+  const params = useParams();
+  const id = params.id as string;
+  
   const router = useRouter();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';

@@ -19,22 +19,18 @@ import LiquorIcon from '@mui/icons-material/Liquor';
 import PrintIcon from '@mui/icons-material/Print';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMixologyData } from '../../../hooks/useMixologyData';
 import { useSpiritData } from '../../../hooks/useSpiritData';
 import { Spirit } from '@/utils/types/spirit.types';
 import { useNotifications } from '@/hooks/useNotifications';
 
-// Types pour les paramètres de la page
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function CocktailDetailsPage({ params }: PageProps) {
-  const { id } = params;
+export default function CocktailDetailsPage() {
+  // Utiliser useParams pour obtenir l'ID directement
+  const params = useParams();
+  const id = params.id as string;
+  
   const router = useRouter();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
@@ -268,9 +264,11 @@ export default function CocktailDetailsPage({ params }: PageProps) {
     const stringToColor = (str: string) => {
       let hash = 0;
       for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash = hash & hash;
       }
       
+      // Palette de couleurs prédéfinies
       const colors = [
         '#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5',
         '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50',

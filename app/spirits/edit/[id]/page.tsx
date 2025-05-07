@@ -10,22 +10,18 @@ import {
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import Navbar from '@/components/Navbar';
 import { Breadcrumbs } from '@/components/ui/Navigation';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Spirit } from '@/utils/types/spirit.types';
 import { useSpiritData } from '../../hooks/useSpiritData';
 import SpiritForm from '../../components/SpiritForm';
 import { supabase } from '@/utils/supabase';
 
-// Types pour les paramètres de la page
-interface PageProps {
-  params: {
-    id: string;
-  };
-}
-
-export default function EditSpiritPage({ params }: PageProps) {
-  const { id } = params;
+export default function EditSpiritPage() {
+  // Utiliser useParams pour obtenir l'ID directement
+  const params = useParams();
+  const id = params.id as string;
+  
   const router = useRouter();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
