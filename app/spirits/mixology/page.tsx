@@ -5,14 +5,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Container, Typography, Box, Grid, Button, 
-  Paper, CircularProgress, Tabs, Tab, Divider,
+  Paper, CircularProgress, Tabs, Tab, 
   TextField, InputAdornment, IconButton, Alert,
-  Chip, Snackbar, useTheme, alpha
+  Chip, Snackbar, useTheme
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
 import SearchIcon from '@mui/icons-material/Search';
-import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,13 +25,11 @@ import CocktailCard from '../components/CocktailCard';
 export default function MixologyPage() {
   const router = useRouter();
   const theme = useTheme();
-  const isDarkMode = theme.palette.mode === 'dark';
   
   const { 
     cocktails, 
     suggestions,
     loading: cocktailLoading, 
-    fetchCocktails,
     generateSuggestions,
     deleteCocktail,
     updateCocktail
@@ -231,7 +228,7 @@ export default function MixologyPage() {
                   <>
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                       <Typography variant="subtitle1">
-                        Résultats pour "{searchTerm}"
+                        Résultats pour &quot;{searchTerm}&quot;
                       </Typography>
                       <Chip 
                         label={filteredCocktails.length} 
@@ -257,7 +254,7 @@ export default function MixologyPage() {
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      Aucun résultat trouvé pour "{searchTerm}"
+                      Aucun résultat trouvé pour &quot;{searchTerm}&quot;
                     </Typography>
                   </Box>
                 )
@@ -317,7 +314,7 @@ export default function MixologyPage() {
                   <>
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                       <Typography variant="subtitle1">
-                        Résultats pour "{searchTerm}"
+                        Résultats pour &quot;{searchTerm}&quot;
                       </Typography>
                       <Chip 
                         label={filteredCocktails.length} 
@@ -343,7 +340,7 @@ export default function MixologyPage() {
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      Aucun résultat trouvé pour "{searchTerm}"
+                      Aucun résultat trouvé pour &quot;{searchTerm}&quot;
                     </Typography>
                   </Box>
                 )
@@ -353,7 +350,7 @@ export default function MixologyPage() {
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <LocalBarIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                     <Typography variant="h6" gutterBottom>
-                      Vous n'avez pas encore créé de cocktails
+                      Vous n&apos;avez pas encore créé de cocktails
                     </Typography>
                     <Typography variant="body1" color="text.secondary" paragraph>
                       Créez votre premier cocktail pour commencer votre collection !
@@ -395,7 +392,7 @@ export default function MixologyPage() {
                   <>
                     <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
                       <Typography variant="subtitle1">
-                        Résultats pour "{searchTerm}" dans les favoris
+                        Résultats pour &quot;{searchTerm}&quot; dans les favoris
                       </Typography>
                       <Chip 
                         label={filteredCocktails.filter(c => c.isFavorite).length} 
@@ -424,7 +421,7 @@ export default function MixologyPage() {
                 ) : (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      Aucun favori trouvé pour "{searchTerm}"
+                      Aucun favori trouvé pour &quot;{searchTerm}&quot;
                     </Typography>
                   </Box>
                 )
@@ -434,7 +431,7 @@ export default function MixologyPage() {
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <FavoriteIcon sx={{ fontSize: 48, color: theme.palette.error.main, mb: 2 }} />
                     <Typography variant="h6" gutterBottom>
-                      Vous n'avez pas encore de cocktails favoris
+                      Vous n&apos;avez pas encore de cocktails favoris
                     </Typography>
                     <Typography variant="body1" color="text.secondary" paragraph>
                       Marquez des cocktails comme favoris pour les retrouver facilement ici !

@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { 
   Card, CardContent, CardMedia, Box, Typography, 
-  Chip, IconButton, Tooltip, useTheme, alpha 
+  Chip, IconButton, useTheme, alpha 
 } from '@mui/material';
-import { Link } from 'next/link';
+import Link from 'next/link';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocalBarIcon from '@mui/icons-material/LocalBar';

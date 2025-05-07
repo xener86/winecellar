@@ -14,19 +14,13 @@ import {
   FormHelperText,
   InputAdornment,
   Chip,
-  Paper,
-  Divider,
   Tabs,
   Tab,
   CircularProgress,
-  Switch,
-  FormControlLabel,
-  Alert,
   useTheme,
-  alpha
+  SelectChangeEvent
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
-import LocalBarIcon from '@mui/icons-material/LocalBar';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import { Spirit, SpiritType, FillLevel } from '@/utils/types/spirit.types';
 import AISearchPanel from './AISearchPanel';
@@ -84,7 +78,7 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
   onCancel,
   loading = false
 }) => {
-  const theme = useTheme();
+  useTheme(); // Pour éviter l'erreur de non-utilisation, on conserve l'appel
   const [formData, setFormData] = useState<Partial<Spirit>>(initialData || defaultSpirit);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [useAI, setUseAI] = useState(false);
@@ -110,13 +104,16 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
     if (name.includes('.')) {
       // Gestion des propriétés imbriquées
       const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof Partial<Spirit>],
-          [child]: value
-        }
-      }));
+      setFormData(prev => {
+        const parentObj = prev[parent as keyof Partial<Spirit>] || {};
+        return {
+          ...prev,
+          [parent]: {
+            ...parentObj,
+            [child]: value
+          }
+        };
+      });
     } else {
       // Champs simples
       setFormData(prev => ({
@@ -135,20 +132,23 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
   };
 
   // Gérer les changements de selects
-  const handleSelectChange = (e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleSelectChange = (e: SelectChangeEvent) => {
     const { name, value } = e.target;
     if (!name) return;
     
     if (name.includes('.')) {
       // Gestion des propriétés imbriquées
       const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof Partial<Spirit>],
-          [child]: value
-        }
-      }));
+      setFormData(prev => {
+        const parentObj = prev[parent as keyof Partial<Spirit>] || {};
+        return {
+          ...prev,
+          [parent]: {
+            ...parentObj,
+            [child]: value
+          }
+        };
+      });
     } else {
       // Champs simples
       setFormData(prev => ({
@@ -174,13 +174,16 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
     if (name.includes('.')) {
       // Gestion des propriétés imbriquées
       const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent as keyof Partial<Spirit>],
-          [child]: numberValue
-        }
-      }));
+      setFormData(prev => {
+        const parentObj = prev[parent as keyof Partial<Spirit>] || {};
+        return {
+          ...prev,
+          [parent]: {
+            ...parentObj,
+            [child]: numberValue
+          }
+        };
+      });
     } else {
       // Champs simples
       setFormData(prev => ({
@@ -222,24 +225,50 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
   const handleAddTastingNote = (note: string) => {
     if (!note.trim()) return;
     
-    setFormData(prev => ({
-      ...prev,
-      details: {
-        ...prev.details,
-        tastingNotes: [...(prev.details?.tastingNotes || []), note.trim()]
-      }
-    }));
+    setFormData(prev => {
+      // S'assurer que tous les champs obligatoires existent
+      const currentDetails = prev.details || {
+        color: null,
+        finish: null,
+        tastingNotes: null,
+        ingredients: null
+      };
+      
+      // Récupérer les tastingNotes existantes ou créer un tableau vide
+      const currentTastingNotes = currentDetails.tastingNotes || [];
+      
+      return {
+        ...prev,
+        details: {
+          ...currentDetails,
+          tastingNotes: [...currentTastingNotes, note.trim()]
+        }
+      };
+    });
   };
 
   // Supprimer une note de dégustation
   const handleDeleteTastingNote = (noteToDelete: string) => {
-    setFormData(prev => ({
-      ...prev,
-      details: {
-        ...prev.details,
-        tastingNotes: (prev.details?.tastingNotes || []).filter(note => note !== noteToDelete)
-      }
-    }));
+    setFormData(prev => {
+      // S'assurer que tous les champs obligatoires existent
+      const currentDetails = prev.details || {
+        color: null,
+        finish: null,
+        tastingNotes: null,
+        ingredients: null
+      };
+      
+      // Récupérer les tastingNotes existantes ou créer un tableau vide
+      const currentTastingNotes = currentDetails.tastingNotes || [];
+      
+      return {
+        ...prev,
+        details: {
+          ...currentDetails,
+          tastingNotes: currentTastingNotes.filter((note: string) => note !== noteToDelete)
+        }
+      };
+    });
   };
 
   // Recevoir les données de l'IA
@@ -588,7 +617,7 @@ const SpiritForm: React.FC<SpiritFormProps> = ({
                   label="Ajouter une note de dégustation"
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTastingNote(newTag))}
                 />
                 
                 <Button 

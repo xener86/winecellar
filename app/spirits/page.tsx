@@ -2,16 +2,15 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Container, Typography, Box, Grid, Button, 
-  Paper, CircularProgress, Card, CardContent,
-  Tabs, Tab, useTheme, Chip, IconButton,
-  Snackbar, Alert, alpha, Divider
+  Paper, CircularProgress, 
+  Tabs, Tab, useTheme, Chip,
+  Snackbar, Alert, alpha
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
-import SearchIcon from '@mui/icons-material/Search';
 import FilterAltIcon from '@mui/icons-material/FilterAlt';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import Link from 'next/link';
@@ -95,15 +94,6 @@ const calculateTotalValue = (spirits: Spirit[]): string => {
   return total.toFixed(0);
 };
 
-// Fonction pour calculer le volume total (en litres)
-const calculateTotalVolume = (spirits: Spirit[]): string => {
-  const totalML = spirits.reduce((sum, spirit) => {
-    return sum + (spirit.volume || 0);
-  }, 0);
-  
-  return (totalML / 1000).toFixed(1);
-};
-
 // Fonction pour regrouper par type
 const groupByType = (spirits: Spirit[]) => {
   const result: Record<SpiritType, number> = {
@@ -132,7 +122,6 @@ export default function SpiritsPage() {
   const { 
     spirits, 
     loading, 
-    fetchSpirits,
     deleteSpirit
   } = useSpiritData();
   
@@ -310,7 +299,7 @@ export default function SpiritsPage() {
               ) : (
                 <Box>
                   {Object.entries(groupByType(spirits))
-                    .filter(([_type, count]) => count > 0)
+                    .filter(([, count]) => count > 0)
                     .map(([type, count]) => {
                       const typeInfo = getSpiritTypeInfo(type as SpiritType);
                       const spiritsOfType = spirits.filter(s => s.type === type);
