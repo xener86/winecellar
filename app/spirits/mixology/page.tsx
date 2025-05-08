@@ -13,6 +13,7 @@ import AddIcon from '@mui/icons-material/Add';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
 import SearchIcon from '@mui/icons-material/Search';
 import FavoriteIcon from '@mui/icons-material/Favorite';
+import ImportExportIcon from '@mui/icons-material/ImportExport'; // Ajout de l'icône d'importation
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -145,6 +146,17 @@ export default function MixologyPage() {
           </Typography>
           
           <Box>
+            {/* Ajout du bouton d'importation à côté du bouton de création */}
+            <Button
+              component={Link}
+              href="/spirits/mixology/import"
+              variant="outlined"
+              startIcon={<ImportExportIcon />}
+              sx={{ borderRadius: 2, mr: 2 }}
+            >
+              Importer des recettes
+            </Button>
+            
             <Button
               component={Link}
               href="/spirits/mixology/create"
@@ -269,14 +281,27 @@ export default function MixologyPage() {
                     <Typography variant="body1" color="text.secondary" paragraph>
                       Ajoutez plus de spiritueux à votre collection pour obtenir des suggestions de cocktails !
                     </Typography>
-                    <Button 
-                      component={Link}
-                      href="/spirits/add"
-                      variant="contained" 
-                      startIcon={<AddIcon />}
-                    >
-                      Ajouter un spiritueux
-                    </Button>
+                    
+                    {/* Ajout du bouton d'importation dans l'affichage vide des suggestions */}
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                      <Button 
+                        component={Link}
+                        href="/spirits/add"
+                        variant="contained" 
+                        startIcon={<AddIcon />}
+                      >
+                        Ajouter un spiritueux
+                      </Button>
+                      
+                      <Button 
+                        component={Link}
+                        href="/spirits/mixology/import"
+                        variant="outlined" 
+                        startIcon={<ImportExportIcon />}
+                      >
+                        Importer des recettes
+                      </Button>
+                    </Box>
                   </Box>
                 ) : (
                   <>
@@ -355,14 +380,27 @@ export default function MixologyPage() {
                     <Typography variant="body1" color="text.secondary" paragraph>
                       Créez votre premier cocktail pour commencer votre collection !
                     </Typography>
-                    <Button 
-                      component={Link}
-                      href="/spirits/mixology/create"
-                      variant="contained" 
-                      startIcon={<AddIcon />}
-                    >
-                      Créer un cocktail
-                    </Button>
+                    
+                    {/* Ajout des boutons de création et d'importation */}
+                    <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                      <Button 
+                        component={Link}
+                        href="/spirits/mixology/create"
+                        variant="contained" 
+                        startIcon={<AddIcon />}
+                      >
+                        Créer un cocktail
+                      </Button>
+                      
+                      <Button 
+                        component={Link}
+                        href="/spirits/mixology/import"
+                        variant="outlined" 
+                        startIcon={<ImportExportIcon />}
+                      >
+                        Importer des recettes
+                      </Button>
+                    </Box>
                   </Box>
                 ) : (
                   <Grid container spacing={2}>
@@ -436,6 +474,17 @@ export default function MixologyPage() {
                     <Typography variant="body1" color="text.secondary" paragraph>
                       Marquez des cocktails comme favoris pour les retrouver facilement ici !
                     </Typography>
+                    
+                    {/* Suggestion d'importation pour les favoris */}
+                    <Button 
+                      component={Link}
+                      href="/spirits/mixology/import"
+                      variant="outlined" 
+                      startIcon={<ImportExportIcon />}
+                      sx={{ mt: 1 }}
+                    >
+                      Découvrir de nouvelles recettes
+                    </Button>
                   </Box>
                 ) : (
                   <Grid container spacing={2}>
