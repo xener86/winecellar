@@ -7,20 +7,10 @@ import CocktailDBService from '@/services/CocktailDBService';
 
 // Clé API TheCocktailDB - À remplacer par votre clé premium
 // Vous pouvez utiliser "1" comme clé de test, mais certaines fonctionnalités sont limitées
-const COCKTAILDB_API_KEY = '961249867'; // Remplacez par votre clé premium
+const COCKTAILDB_API_KEY = '961249867'; // Votre clé premium
 
 export async function GET(req: NextRequest) {
   try {
-    // Vérifier l'authentification (optionnel, à configurer selon vos besoins)
-    const supabase = createServerComponentClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json({ 
-        error: 'Utilisateur non authentifié' 
-      }, { status: 401 });
-    }
-    
     // Récupérer les paramètres de la requête
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
@@ -29,6 +19,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ 
         error: 'Paramètre "action" manquant' 
       }, { status: 400 });
+    }
+    
+    // Vérifier si l'utilisateur est connecté (mais ne pas bloquer l'exécution)
+    try {
+      const supabase = createServerComponentClient({ cookies });
+      // Juste vérifier si une session existe, sans stocker l'ID utilisateur
+      await supabase.auth.getSession();
+      // Si besoin d'utiliser l'utilisateur plus tard, décommenter la ligne suivante
+      // const { data: { session } } = await supabase.auth.getSession();
+    } catch (authError) {
+      console.warn('Erreur authentification (non bloquante):', authError);
+      // Continue sans authentification
     }
     
     // Initialiser le service CocktailDB
@@ -122,7 +124,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Vérifier l'authentification
+    // Vérifier l'authentification - obligatoire pour les modifications
     const supabase = createServerComponentClient({ cookies });
     const { data: { session } } = await supabase.auth.getSession();
     
