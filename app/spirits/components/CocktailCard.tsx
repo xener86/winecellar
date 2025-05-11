@@ -6,7 +6,7 @@ import {
   Chip, IconButton, Tooltip, useTheme, alpha, 
   Button, Rating, Divider
 } from '@mui/material';
-import Link from 'next/link'; // Correction: import Link correctement
+import Link from 'next/link';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LocalBarIcon from '@mui/icons-material/LocalBar';
@@ -24,6 +24,7 @@ interface CocktailCardProps {
   onDelete?: (id: string) => void;
   onToggleFavorite?: (id: string, value: boolean) => void;
   availableSpirits?: Spirit[];
+  isExternal?: boolean;
 }
 
 const CocktailCard: React.FC<CocktailCardProps> = ({ 
@@ -32,14 +33,15 @@ const CocktailCard: React.FC<CocktailCardProps> = ({
   onEdit, 
   onDelete,
   onToggleFavorite,
-  availableSpirits = []
+  availableSpirits = [],
+  isExternal = false
 }) => {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isHovered, setIsHovered] = useState(false);
   
-  // Vérifier si c'est une suggestion ou un cocktail enregistré
-  const isSuggestion = !('id' in cocktail) || 'matchScore' in cocktail;
+  // Vérifier si c'est une suggestion ou un cocktail externe ou enregistré
+  const isSuggestion = !('id' in cocktail) || 'matchScore' in cocktail || isExternal;
   
   // Traduire la catégorie en français
   const getCategoryLabel = (category: string): string => {
@@ -408,7 +410,6 @@ const CocktailCard: React.FC<CocktailCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <Box sx={{ position: 'relative' }}>
-        {/* Correction: vérifier si 'image' existe sur le cocktail */}
         {('image' in cocktail && cocktail.image) ? (
           <CardMedia
             component="img"
@@ -581,6 +582,17 @@ const CocktailCard: React.FC<CocktailCardProps> = ({
             <Button 
               variant="outlined" 
               fullWidth
+              onClick={() => {
+                // Afficher les détails du cocktail
+                const details = `
+Nom: ${cocktail.name}
+Catégorie: ${getCategoryLabel(cocktail.category)}
+Ingrédients: ${cocktail.ingredients.map(i => `${i.amount} ${i.unit} de ${i.name}`).join(', ')}
+Difficulté: ${getDifficultyLabel(cocktail.difficulty)}
+Préparation: ${cocktail.preparation}
+`;
+                alert(details);
+              }}
               sx={{ borderRadius: 2 }}
             >
               Voir la recette

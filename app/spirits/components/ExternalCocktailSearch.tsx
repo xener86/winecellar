@@ -180,42 +180,50 @@ const ExternalCocktailSearch: React.FC<ExternalCocktailSearchProps> = ({
     }
   };
   
-  // Importer un cocktail
+  // Importer un cocktail - Version directe sans vérification d'authentification
   const handleImport = async (cocktail: Cocktail) => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch('/api/cocktails/external', {
+      // Appeler directement notre nouvelle API d'importation
+      const response = await fetch('/api/cocktails/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          action: 'import',
           cocktailId: cocktail.id
         }),
       });
       
-      if (!response.ok) {
-        throw new Error(`Erreur API: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      // Afficher une notification de succès
-      setNotification({
-        open: true,
-        message: `Cocktail "${cocktail.name}" importé avec succès`,
-        severity: 'success'
-      });
-      
-      // Appeler le callback onImport si fourni
-      if (onImport) {
-        onImport(data);
+      // Traiter la réponse
+      let responseText = '';
+      try {
+        const responseData = await response.json();
+        responseText = JSON.stringify(responseData);
+        
+        if (!response.ok) {
+          throw new Error(responseData.error || `Erreur API: ${response.status}`);
+        }
+        
+        // Si l'importation a réussi
+        setNotification({
+          open: true,
+          message: `Cocktail "${cocktail.name}" importé avec succès`,
+          severity: 'success'
+        });
+        
+        // Appeler le callback onImport si fourni
+        if (onImport) {
+          onImport(responseData.data || cocktail);
+        }
+      } catch (parseError) {
+        console.error('Erreur parsing réponse:', parseError, 'Réponse brute:', responseText);
+        throw new Error(`Erreur lors du traitement de la réponse (${response.status})`);
       }
     } catch (error) {
-      console.error('Erreur import:', error);
+      console.error('Erreur détaillée lors de l\'import:', error);
       setError(error instanceof Error ? error.message : 'Erreur lors de l\'importation');
       
       // Afficher une notification d'erreur
@@ -267,13 +275,15 @@ const ExternalCocktailSearch: React.FC<ExternalCocktailSearchProps> = ({
                 <CocktailCard 
                   cocktail={cocktail} 
                   availableSpirits={availableSpirits}
+                  isExternal={true} // Marquer comme cocktail externe
                 />
                 <Button
                   fullWidth
                   variant="outlined"
                   color="primary"
-                  startIcon={<ImportExportIcon />}
+                  startIcon={loading ? <CircularProgress size={20} /> : <ImportExportIcon />}
                   onClick={() => handleImport(cocktail)}
+                  disabled={loading}
                   sx={{ mt: 1, borderRadius: 2 }}
                 >
                   Importer
@@ -295,13 +305,15 @@ const ExternalCocktailSearch: React.FC<ExternalCocktailSearchProps> = ({
                 <CocktailCard 
                   cocktail={cocktail} 
                   availableSpirits={availableSpirits}
+                  isExternal={true} // Marquer comme cocktail externe
                 />
                 <Button
                   fullWidth
                   variant="outlined"
                   color="primary"
-                  startIcon={<ImportExportIcon />}
+                  startIcon={loading ? <CircularProgress size={20} /> : <ImportExportIcon />}
                   onClick={() => handleImport(cocktail)}
+                  disabled={loading}
                   sx={{ mt: 1, borderRadius: 2 }}
                 >
                   Importer

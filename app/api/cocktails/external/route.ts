@@ -122,15 +122,21 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// Endpoint pour l'authentification simple
 export async function POST(req: NextRequest) {
   try {
     // Vérifier l'authentification - obligatoire pour les modifications
     const supabase = createServerComponentClient({ cookies });
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    // Log pour le debugging
+    console.log("Session vérification:", !!session, "Erreur:", sessionError);
     
     if (!session) {
+      console.error("Erreur d'authentification: Session non trouvée");
       return NextResponse.json({ 
-        error: 'Utilisateur non authentifié' 
+        error: 'Utilisateur non authentifié', 
+        details: 'Veuillez vous reconnecter et réessayer'
       }, { status: 401 });
     }
     
@@ -160,6 +166,8 @@ export async function POST(req: NextRequest) {
             error: 'Paramètre "cocktailId" manquant' 
           }, { status: 400 });
         }
+        
+        console.log("Import de cocktail:", cocktailId, "pour utilisateur:", session.user.id);
         
         // Récupérer les détails du cocktail
         const cocktail = await cocktailDBService.getById(cocktailId);
@@ -199,9 +207,11 @@ export async function POST(req: NextRequest) {
           .single();
         
         if (error) {
+          console.error("Erreur Supabase lors de l'import:", error);
           throw new Error(`Erreur lors de l'import: ${error.message}`);
         }
         
+        console.log("Import réussi, ID généré:", data.id);
         return NextResponse.json(data);
       }
       
@@ -217,5 +227,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'Erreur inconnue' 
     }, { status: 500 });
+  }
+}
+
+// Endpoint pour vérifier l'authentification
+export async function HEAD() {
+  try {
+    const supabase = createServerComponentClient({ cookies });
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      return new NextResponse(null, { status: 401 });
+    }
+    
+    return new NextResponse(null, { status: 200 });
+  } catch (error) {
+    console.error('Erreur vérification authentification:', error);
+    return new NextResponse(null, { status: 500 });
   }
 }
