@@ -78,26 +78,39 @@ const WineBottle = ({
     
     return (
       <svg width="100" height={height} viewBox="0 0 100 300" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="glassReflect" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#fff" stopOpacity="0.6" />
+            <stop offset="50%" stopColor="#fff" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#fff" stopOpacity="0.6" />
+          </linearGradient>
+          <radialGradient id="bodyHighlight" cx="50%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#fff" stopOpacity="0.4" />
+            <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+
         {/* Goulot de la bouteille */}
-        <rect x="42" y="10" width="16" height="30" fill="#555" />
-        
-        {/* Corps de la bouteille */}
-        <path d="M30 40 L40 40 L40 60 L35 280 L65 280 L60 60 L60 40 L70 40 L70 60 L75 280 L25 280 L30 60 Z" fill="#333" />
-        
-        {/* Contenu de la bouteille (vin) */}
-        <path d="M35 70 L65 70 L63 260 L37 260 Z" fill={colorStyle.glassColor} />
-        
+        <path d="M46 20 L46 70 C46 80 44 90 40 98 C36 106 34 114 34 124 L34 260 C34 272 66 272 66 260 L66 124 C66 114 64 106 60 98 C56 90 54 80 54 70 L54 20 Z" fill="#333" />
+
+        {/* Vin à l'intérieur de la bouteille */}
+        <path d="M40 124 L60 124 L60 260 C60 262 40 262 40 260 Z" fill={colorStyle.glassColor} />
+
+        {/* Reflets sur le verre */}
+        <path d="M46 20 L46 70 C46 80 44 90 40 98 C36 106 34 114 34 124 L34 260 C34 272 66 272 66 260 L66 124 C66 114 64 106 60 98 C56 90 54 80 54 70 L54 20 Z" fill="url(#bodyHighlight)" />
+        <path d="M42 80 L46 80 L46 220 L42 220 Z" fill="url(#glassReflect)" />
+
         {/* Étiquette de la bouteille */}
         {showLabel && (
           <>
-            <rect x="32" y="140" width="36" height="60" fill="#F8F8F8" stroke="#DDD" />
-            <text x="50" y="160" textAnchor="middle" fill="#333" fontSize="8" fontWeight="bold">
+            <rect x="34" y="150" width="32" height="50" fill="#F8F8F8" stroke="#DDD" />
+            <text x="50" y="165" textAnchor="middle" fill="#333" fontSize="8" fontWeight="bold">
               {vintage || ''}
             </text>
-            <text x="50" y="172" textAnchor="middle" fill="#333" fontSize="7">
+            <text x="50" y="177" textAnchor="middle" fill="#333" fontSize="7">
               {name && name.length > 12 ? name.substring(0, 10) + '...' : name}
             </text>
-            <text x="50" y="182" textAnchor="middle" fill="#333" fontSize="6">
+            <text x="50" y="187" textAnchor="middle" fill="#333" fontSize="6">
               {domain && (domain.length > 14 ? domain.substring(0, 12) + '...' : domain)}
             </text>
           </>
