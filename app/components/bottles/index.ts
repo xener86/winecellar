@@ -1,4 +1,5 @@
 // app/components/bottles/index.ts
+export { default as BaseWineBottle } from './BaseWineBottle';
 export { default as RedWineBottle } from './RedWineBottle';
 export { default as WhiteWineBottle } from './WhiteWineBottle';
 export { default as RoseWineBottle } from './RoseWineBottle';
