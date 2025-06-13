@@ -85,7 +85,7 @@ const RoseWineBottle = ({ wineInfo }: { wineInfo: WineInfo }) => {
       )}
       
       {/* Petit sceau ou médaille */}
-      <circle cx="100" y="150" r="15" fill="#E75A7C" />
+      <circle cx="100" cy="150" r="15" fill="#E75A7C" />
       <text x="100" y="153" textAnchor="middle" fontSize="5" fontWeight="bold" fill="white" fontFamily="serif">
         ROSÉ
       </text>

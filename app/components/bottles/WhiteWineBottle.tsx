@@ -85,7 +85,7 @@ const WhiteWineBottle = ({ wineInfo }: { wineInfo: WineInfo }) => {
       )}
       
       {/* Petit sceau ou médaille */}
-      <circle cx="100" y="150" r="15" fill="#E6C32E" />
+      <circle cx="100" cy="150" r="15" fill="#E6C32E" />
       <text x="100" y="153" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#1A1A1A" fontFamily="serif">
         GRAND CRU
       </text>
