@@ -29,6 +29,7 @@ import AddIcon from '@mui/icons-material/Add';
 import LiquorIcon from '@mui/icons-material/Liquor';
 import SportsBarIcon from '@mui/icons-material/SportsBar';
 import WarehouseIcon from '@mui/icons-material/Warehouse';
+import LabelIcon from '@mui/icons-material/Label';
 
 export default function Navbar() {
   const router = useRouter();
@@ -99,10 +100,11 @@ export default function Navbar() {
     },
     { label: 'ACCORDS METS-VINS', icon: <RestaurantIcon />, path: '/food-pairing' },
     { label: 'DÉGUSTATIONS', icon: <LocalBarIcon />, path: '/tasting-notes' },
-    { 
-      label: 'ANALYSES & SUGGESTIONS', 
-      icon: <PieChartIcon />, 
-      path: '/insights' 
+    { label: 'ÉTIQUETTES', icon: <LabelIcon />, path: '/generate-label' },
+    {
+      label: 'ANALYSES & SUGGESTIONS',
+      icon: <PieChartIcon />,
+      path: '/insights'
     },
   ];
 
