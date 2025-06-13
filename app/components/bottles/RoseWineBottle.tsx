@@ -1,31 +1,10 @@
 import React from 'react';
-
-type WineInfo = {
-  name: string;
-  vintage?: number;
-  domain?: string;
-  appellation?: string;
-  region?: string;
-  alcoholPercentage?: number;
-};
+import type { WineInfo } from './utils';
+import { formatDisplayName } from './utils';
 
 const RoseWineBottle = ({ wineInfo }: { wineInfo: WineInfo }) => {
   const { name, vintage, domain, appellation, region, alcoholPercentage } = wineInfo;
   
-  // Formater le nom principal de l'étiquette
-  const formatDisplayName = () => {
-    let displayName = name;
-    
-    // Si c'est un domaine suivi d'un nom, on inverse l'ordre pour l'étiquette
-    if (domain && name.includes(domain)) {
-      const remainingName = name.replace(domain, '').trim();
-      if (remainingName) {
-        displayName = remainingName;
-      }
-    }
-    
-    return displayName;
-  };
 
   return (
     <svg width="100%" height="100%" viewBox="0 0 200 400" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -56,7 +35,7 @@ const RoseWineBottle = ({ wineInfo }: { wineInfo: WineInfo }) => {
       </text>
       
       <text x="100" y="225" textAnchor="middle" fontSize="14" fontWeight="bold" fill="#1A1A1A" fontFamily="serif">
-        {formatDisplayName()}
+        {formatDisplayName(name, domain)}
       </text>
       
       {vintage && (
