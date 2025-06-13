@@ -97,7 +97,7 @@ const SparklingWineBottle = ({ wineInfo }: { wineInfo: WineInfo }) => {
       <circle cx="110" cy="120" r="1" fill="#D4AF37" />
       
       {/* Sceau doré */}
-      <circle cx="100" y="150" r="15" fill="#D4AF37" />
+      <circle cx="100" cy="150" r="15" fill="#D4AF37" />
       <text x="100" y="153" textAnchor="middle" fontSize="5" fontWeight="bold" fill="#1A1A1A" fontFamily="serif">
         BRUT
       </text>
