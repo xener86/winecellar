@@ -1,0 +1,66 @@
+FROM node:20-alpine AS base
+
+# Installer les dépendances système nécessaires
+RUN apk add --no-cache libc6-compat
+
+# Étape 1 : Installer les dépendances
+FROM base AS deps
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package.json package-lock.json* ./
+RUN npm ci
+
+# Étape 2 : Builder l'application
+FROM base AS builder
+WORKDIR /app
+
+# Arguments de build
+ARG NEXT_PUBLIC_SUPABASE_URL
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+# Les définir en tant que variables d'environnement pour le build
+ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Copier les dépendances depuis l'étape précédente
+COPY --from=deps /app/node_modules ./node_modules
+
+# Copier tous les fichiers source
+COPY . .
+
+# Build Next.js
+RUN npm run build
+
+# Étape 3 : Image de production
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# Créer un utilisateur non-root
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Créer le dossier public/images avec les bonnes permissions
+RUN mkdir -p /app/public/images && chown -R nextjs:nodejs /app/public
+
+# Copier les fichiers nécessaires depuis le builder
+COPY --from=builder /app/public ./public
+
+# Copier les fichiers Next.js standalone
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Démarrer l'application
+CMD ["node", "server.js"]
