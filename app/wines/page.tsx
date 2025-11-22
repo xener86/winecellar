@@ -219,7 +219,7 @@ export default function Wines() {
             .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
             .sort();
           setUniqueRegions(regions);
-          showNotification('Recherche classique utilisée en raison d\'une indisponibilité temporaire.', 'info');
+          showNotification('Mode recherche standard activé automatiquement. Vos filtres restent appliqués.', 'info');
           return;
         }
 
@@ -442,21 +442,28 @@ export default function Wines() {
         </div>
         
         {/* Titre et bouton d'ajout */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-serif font-medium text-wine-burgundy">
-            Mes Vins
-          </h1>
-          <Link href="/add-wine">
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={<AddIcon />}
-              className="rounded-lg bg-gradient-to-r from-wine-burgundy to-wine-red hover:from-wine-red hover:to-wine-burgundy shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Ajouter un vin
-            </Button>
-          </Link>
-        </div>
+        <Paper className="mb-8" sx={{ p: { xs: 3, md: 4 }, borderRadius: 3, background: 'linear-gradient(120deg, rgba(128,0,64,0.08), rgba(123,31,162,0.04))' }}>
+          <div className="flex justify-between items-start gap-4 flex-col sm:flex-row sm:items-center">
+            <div>
+              <h1 className="text-3xl font-serif font-medium text-wine-burgundy">
+                Mes Vins
+              </h1>
+              <p className="text-gray-600 mt-2 max-w-2xl">
+                Visualisez votre cave avec une interface plus lumineuse et profitez d’une recherche qui bascule automatiquement vers le mode le plus fiable.
+              </p>
+            </div>
+            <Link href="/add-wine">
+              <Button
+                variant="contained"
+                color="primary"
+                startIcon={<AddIcon />}
+                className="rounded-lg bg-gradient-to-r from-wine-burgundy to-wine-red hover:from-wine-red hover:to-wine-burgundy shadow-md hover:shadow-lg transition-all duration-300"
+              >
+                Ajouter un vin
+              </Button>
+            </Link>
+          </div>
+        </Paper>
 
         {/* Barre de recherche et filtres */}
         <Paper className="p-6 mb-8 rounded-xl shadow-sm border border-gray-100">

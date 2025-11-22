@@ -355,11 +355,32 @@ export default function FoodPairingPage() {
     <>
       <Navbar />
       <Container maxWidth="lg" sx={{ mt: 6, mb: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6 }}>
-          <Typography variant="h4">Accords Mets & Vins</Typography>
-          <Button component={Link} href="/settings" variant="outlined">
-            Configuration API
-          </Button>
+        <Box
+          sx={{
+            p: { xs: 3, md: 4 },
+            mb: 5,
+            borderRadius: 4,
+            background: 'linear-gradient(120deg, rgba(128,0,64,0.08), rgba(123,31,162,0.06))',
+            border: 1,
+            borderColor: theme.palette.divider,
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+            <Box>
+              <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>
+                Recommandations pilotées par l’IA
+              </Typography>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>
+                Accords Mets & Vins
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 1.5 }} color="text.secondary">
+                L’algorithme explore d’abord vos bouteilles en cave puis vos emplacements disponibles avant de proposer des alternatives.
+              </Typography>
+            </Box>
+            <Button component={Link} href="/settings" variant="outlined" sx={{ borderRadius: 2 }}>
+              Configuration API
+            </Button>
+          </Box>
         </Box>
 
         {loading ? (
@@ -370,9 +391,11 @@ export default function FoodPairingPage() {
           <Paper elevation={0} sx={{
             border: 1,
             borderColor: theme.palette.divider,
-            borderRadius: 2,
-            bgcolor: isDarkMode ? 'rgba(255,255,255,0.03)' : 'white',
+            borderRadius: 3,
+            bgcolor: isDarkMode ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.9)',
             overflow: 'hidden',
+            boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
+            backdropFilter: 'blur(6px)'
           }}>
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
             <Tabs value={tabIndex} onChange={(_, idx) => setTabIndex(idx)} variant="fullWidth">

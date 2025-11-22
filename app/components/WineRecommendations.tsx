@@ -60,23 +60,41 @@ export default function WineRecommendations({
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
-          Suggestions de vins pour : <strong>{foodQuery}</strong>
+      <Box
+        sx={{
+          mb: 4,
+          p: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(120deg, rgba(128,0,64,0.08), rgba(123,31,162,0.04))',
+          border: 1,
+          borderColor: 'divider'
+        }}
+      >
+        <Typography variant="h5" gutterBottom fontWeight="bold">
+          Inspirations pour : <strong>{foodQuery}</strong>
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          Voici des recommandations générales d&apos;accords mets-vins. Ces suggestions 
-          sont basées sur des principes œnologiques et gastronomiques.
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 720 }}>
+          Nous partons de vos envies pour proposer une palette de vins équilibrée. Chaque accord est classé
+          pour vous guider entre valeurs sûres, pistes audacieuses et coups de cœur.
         </Typography>
-        <Button 
-          variant="contained" 
-          color="secondary" 
+        <Button
+          variant="contained"
+          color="secondary"
           onClick={onCheckCellar}
           disabled={loading}
-          sx={{ mb: 2 }}
+          sx={{
+            mb: 1,
+            px: 3,
+            borderRadius: 2,
+            textTransform: 'none',
+            boxShadow: '0 12px 30px rgba(128,0,64,0.18)'
+          }}
         >
-          Vérifier les correspondances dans ma cave
+          Vérifier avec ma cave
         </Button>
+        <Typography variant="caption" display="block" color="text.secondary">
+          L’IA cherchera d’abord dans vos bouteilles, puis suggérera les meilleurs emplacements disponibles.
+        </Typography>
       </Box>
 
       {Object.entries(groupedRecommendations).map(([type, recs]) => (
@@ -87,21 +105,31 @@ export default function WineRecommendations({
           <Grid container spacing={2}>
             {recs.map((rec, index) => (
               <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }} key={index}>
-                <Paper sx={{ p: 3, height: '100%' }}>
+                <Paper
+                  sx={{
+                    p: 3,
+                    height: '100%',
+                    borderRadius: 3,
+                    border: 1,
+                    borderColor: 'divider',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.04)'
+                  }}
+                >
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                     <Typography variant="h6" fontWeight="bold">
                       {rec.wine_type}
                     </Typography>
-                    <Chip 
-                      label={getPairingTypeLabel(rec.pairing_type)} 
+                    <Chip
+                      label={getPairingTypeLabel(rec.pairing_type)}
                       color={getPairingTypeColor(rec.pairing_type)}
                       size="small"
+                      variant="outlined"
                     />
                   </Box>
-                  
+
                   <Divider sx={{ my: 1.5 }} />
-                  
-                  <Box sx={{ mb: 2 }}>
+
+                  <Box sx={{ mb: 2, display: 'grid', gap: 0.5 }}>
                     <Typography variant="body2" color="text.secondary">
                       <strong>Cépage :</strong> {rec.grape || 'Non spécifié'}
                     </Typography>
@@ -109,8 +137,8 @@ export default function WineRecommendations({
                       <strong>Caractéristiques :</strong> {rec.characteristics || 'Non spécifiées'}
                     </Typography>
                   </Box>
-                  
-                  <Typography variant="body1">
+
+                  <Typography variant="body1" color="text.primary">
                     {rec.explanation || 'Pas d\'explication disponible.'}
                   </Typography>
                 </Paper>
