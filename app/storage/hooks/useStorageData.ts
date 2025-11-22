@@ -242,6 +242,3 @@ export const useStorageData = () => {
     deleteLocation
   };
 };
-
-// Ajout des imports manquants
-import { useEffect } from 'react';
