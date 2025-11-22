@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react'; 
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { 
   Container, Typography, Box, Paper, Button, CircularProgress, 
   Snackbar, Alert, useTheme, useMediaQuery
@@ -16,6 +16,9 @@ import BottleDetailDialog from './components/dialogs/BottleDetailDialog';
 import ConsumeBottleDialog from './components/dialogs/ConsumeBottleDialog';
 import LabelDialog from './components/dialogs/LabelDialog';
 import AperitifSuggestionsDialog from './components/dialogs/AperitifSuggestionsDialog';
+import QuickAddDialog from './components/QuickAddDialog';
+import SearchDialog from './components/dialogs/SearchDialog';
+import FilterDialog from './components/dialogs/FilterDialog';
 import EnhancedSpeedDialMenu from './components/EnhancedSpeedDialMenu';
 import SimplifiedActionMenu from './components/SimplifiedActionMenu';
 
@@ -74,12 +77,14 @@ export default function StorageManagement() {
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('md'));
   
   // Utiliser le hook personnalisé pour la gestion des données
-  const { 
+  const {
     locations,
     selectedLocation,
     setSelectedLocation,
     positions,
     bottles,
+    unassignedBottles,
+    locationBottleCounts,
     setBottles,
     loading,
     positionLoading,
@@ -106,12 +111,21 @@ export default function StorageManagement() {
   const [aperitifSuggestions, setAperitifSuggestions] = useState<Bottle[]>([]);
   const [aperitifDialogOpen, setAperitifDialogOpen] = useState(false);
   const [hoveredPositionInfo, setHoveredPositionInfo] = useState<{ row: number, col: number } | null>(null);
-  
+  const [quickAddDialogOpen, setQuickAddDialogOpen] = useState(false);
+  const [quickAddPosition, setQuickAddPosition] = useState<Position | null>(null);
+  const [searchDialogOpen, setSearchDialogOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [vintageRange, setVintageRange] = useState<{ min: number; max: number }>({ min: 1980, max: new Date().getFullYear() });
+  const [autoOptimizeEnabled, setAutoOptimizeEnabled] = useState(true);
+  const [suggestedPlacements, setSuggestedPlacements] = useState<Record<string, Position>>({});
+  const [inventoryGroups, setInventoryGroups] = useState<Record<string, Bottle[]>>({});
+  const optimizationTimer = useRef<NodeJS.Timeout | null>(null);
+
   // Nous conservons cette variable pour de futures fonctionnalités
   // liées à l'API, comme l'analyse des bouteilles
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiKey, setApiKey] = useState('');
-  
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filters, setFilters] = useState<FilterOptions>({
     colors: [],
@@ -124,6 +138,67 @@ export default function StorageManagement() {
     consumption_date: new Date(),
     tasting_note: ''
   });
+
+  const emptyPositions = useMemo(
+    () => positions.filter(pos => !bottles.some(bottle => bottle.position_id === pos.id)),
+    [positions, bottles]
+  );
+
+  // Calculer dynamiquement la plage des millésimes disponibles
+  useEffect(() => {
+    const vintages = bottles
+      .map(b => b.wine?.vintage)
+      .filter((vintage): vintage is number => typeof vintage === 'number');
+
+    if (vintages.length > 0) {
+      const min = Math.min(...vintages);
+      const max = Math.max(...vintages);
+      setVintageRange({
+        min: Number.isFinite(min) ? min : 1980,
+        max: Number.isFinite(max) ? max : new Date().getFullYear()
+      });
+    }
+  }, [bottles]);
+
+  useEffect(() => {
+    if (!inventoryMode) return;
+
+    const grouped = [...bottles, ...unassignedBottles].reduce<Record<string, Bottle[]>>((acc, bottle) => {
+      const key = `${bottle.wine?.name || 'Vin inconnu'}-${bottle.wine?.vintage || 'NV'}`;
+      acc[key] = acc[key] ? [...acc[key], bottle] : [bottle];
+      return acc;
+    }, {});
+
+    setInventoryGroups(grouped);
+  }, [inventoryMode, bottles, unassignedBottles]);
+
+  const computeSuggestedPlacements = useCallback(() => {
+    if (!selectedLocation) return;
+
+    const sortedEmpty = [...emptyPositions].sort((a, b) =>
+      a.row_position === b.row_position
+        ? a.column_position - b.column_position
+        : a.row_position - b.row_position
+    );
+
+    const placements: Record<string, Position> = {};
+    unassignedBottles.forEach((bottle, index) => {
+      if (sortedEmpty[index]) {
+        placements[bottle.id] = sortedEmpty[index];
+      }
+    });
+
+    setSuggestedPlacements(placements);
+  }, [selectedLocation, emptyPositions, unassignedBottles]);
+
+  useEffect(() => {
+    computeSuggestedPlacements();
+  }, [computeSuggestedPlacements]);
+
+  useEffect(() => {
+    if (!inventoryMode) return;
+    handleAutoPlacement();
+  }, [handleAutoPlacement, inventoryMode]);
 
   // Récupérer les clés API
   const fetchAPIKeys = useCallback(async () => {
@@ -158,6 +233,22 @@ export default function StorageManagement() {
     fetchAPIKeys();
   }, [fetchLocations, fetchAPIKeys]);
 
+  useEffect(() => {
+    if (!autoOptimizeEnabled || !selectedLocation || bottles.length === 0) return;
+
+    if (optimizationTimer.current) {
+      clearTimeout(optimizationTimer.current);
+    }
+
+    optimizationTimer.current = setTimeout(() => {
+      handleOptimizePlacement();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (optimizationTimer.current) clearTimeout(optimizationTimer.current);
+    };
+  }, [autoOptimizeEnabled, bottles.length, handleOptimizePlacement, selectedLocation]);
+
   // Gérer le clic sur une position
   const handlePositionClick = (position: Position) => {
     const bottle = bottles.find(b => b.position_id === position.id);
@@ -173,15 +264,43 @@ export default function StorageManagement() {
   };
   
   // Ouvrir le dialogue d'ajout de bouteille
-  const handleOpenQuickAddDialog = () => {
-    // Ici, nous pourrions communiquer directement avec le composant QuickAddDialog
-    // en utilisant un système d'événements ou un contexte, mais pour simplifier
-    // nous utilisons une approche minimaliste en réutilisant le code existant
-    showNotification('Sélectionnez une bouteille à placer', 'info');
-    
-    // Rappeler aux développeurs que cette fonctionnalité peut être améliorée
-    console.log('Fonctionnalité d\'ajout rapide de bouteille à optimiser');
+  const handleOpenQuickAddDialog = (position?: Position) => {
+    if (!selectedLocation) {
+      showNotification('Sélectionnez un emplacement avant d\'ajouter une bouteille', 'info');
+      return;
+    }
+
+    const emptyPosition = position
+      || positions.find(pos => !bottles.some(bottle => bottle.position_id === pos.id));
+
+    if (!emptyPosition) {
+      showNotification('Aucune position libre dans cet emplacement', 'warning');
+      return;
+    }
+
+    setQuickAddPosition(emptyPosition);
+    setQuickAddDialogOpen(true);
   };
+
+  const handleAutoPlacement = useCallback(async () => {
+    if (!selectedLocation || unassignedBottles.length === 0 || emptyPositions.length === 0) return;
+
+    const updates = unassignedBottles.slice(0, emptyPositions.length).map((bottle, index) => ({
+      id: bottle.id,
+      position_id: emptyPositions[index].id
+    }));
+
+    try {
+      const { error } = await supabase.from('bottle').upsert(updates, { onConflict: 'id' });
+      if (error) throw error;
+
+      showNotification('Placement automatique appliqué', 'success');
+      fetchPositionsAndBottles(selectedLocation.id, filters);
+    } catch (error: unknown) {
+      console.error('Erreur placement automatique:', error);
+      showNotification(`Erreur: ${error instanceof Error ? error.message : 'Placement impossible'}`, 'error');
+    }
+  }, [emptyPositions, fetchPositionsAndBottles, filters, selectedLocation, showNotification, unassignedBottles]);
   
   // Marquer une bouteille comme consommée
   const handleConsumeBottle = async () => {
@@ -273,26 +392,66 @@ export default function StorageManagement() {
   };
 
   // Optimisation du placement des bouteilles
-  const handleOptimizePlacement = async () => {
+  const handleOptimizePlacement = useCallback(async () => {
     if (!selectedLocation || bottles.length === 0) {
       showNotification('Aucune bouteille à optimiser', 'info');
       return;
     }
-    
-    showNotification('Optimisation effectuée', 'success');
-    // Implémentation de l'optimisation ici
-  };
+
+    const sortedPositions = [...positions].sort((a, b) =>
+      a.row_position === b.row_position
+        ? a.column_position - b.column_position
+        : a.row_position - b.row_position
+    );
+
+    const sortedBottles = [...bottles].sort((a, b) => {
+      const dateA = a.acquisition_date ? new Date(a.acquisition_date).getTime() : 0;
+      const dateB = b.acquisition_date ? new Date(b.acquisition_date).getTime() : 0;
+      return dateA - dateB;
+    });
+
+    const updates = sortedBottles
+      .map((bottle, index) => ({ id: bottle.id, position_id: sortedPositions[index]?.id || null }))
+      .filter(update => {
+        const currentBottle = bottles.find(b => b.id === update.id);
+        return currentBottle?.position_id !== update.position_id;
+      });
+
+    if (updates.length === 0) {
+      showNotification('Les bouteilles sont déjà positionnées de manière compacte', 'info');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('bottle')
+        .upsert(updates, { onConflict: 'id' });
+
+      if (error) throw error;
+
+      showNotification('Optimisation effectuée', 'success');
+      fetchPositionsAndBottles(selectedLocation.id, filters);
+    } catch (error: unknown) {
+      console.error('Erreur optimisation placement:', error);
+      showNotification(`Erreur: ${error instanceof Error ? error.message : 'Optimisation impossible'}`, 'error');
+    }
+  }, [bottles, fetchPositionsAndBottles, filters, positions, selectedLocation, showNotification]);
 
   // Gestion de la recherche
   const handleSearch = () => {
-    // Implémenter la logique de recherche ici
-    showNotification('Fonctionnalité de recherche à implémenter', 'info');
+    setSearchDialogOpen(true);
   };
 
   // Gestion des filtres
   const handleFilter = () => {
-    // Implémenter la logique de filtrage ici
-    showNotification('Fonctionnalité de filtrage à implémenter', 'info');
+    setFilterDialogOpen(true);
+  };
+
+  const handleApplyFilters = (newFilters: FilterOptions) => {
+    setFilters(newFilters);
+    if (selectedLocation) {
+      fetchPositionsAndBottles(selectedLocation.id, newFilters);
+    }
   };
 
   // Générer suggestions apéritif
@@ -340,6 +499,8 @@ export default function StorageManagement() {
     }
   };
 
+  const filterBadge = useMemo(() => filters.colors.concat(filters.labels), [filters]);
+
   if (loading) {
     return (
       <React.Fragment>
@@ -368,9 +529,9 @@ export default function StorageManagement() {
         <Breadcrumbs />
         
         {/* Titre principal */}
-        <Typography 
-          variant="h4" 
-          component="h1" 
+        <Typography
+          variant="h4"
+          component="h1"
           fontWeight="500"
           sx={{
             mb: 3,
@@ -383,9 +544,68 @@ export default function StorageManagement() {
           Mes Emplacements
         </Typography>
 
+        <Paper
+          sx={{
+            mb: 3,
+            p: 2,
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 2,
+            alignItems: { xs: 'flex-start', md: 'center' }
+          }}
+          variant="outlined"
+        >
+          <Box>
+            <Typography variant="subtitle1">Stock général</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {unassignedBottles.length} bouteille(s) sans position · {emptyPositions.length} emplacement(s) libre(s)
+            </Typography>
+          </Box>
+          <Box display="flex" gap={1} flexWrap="wrap">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleAutoPlacement}
+              disabled={unassignedBottles.length === 0 || emptyPositions.length === 0}
+            >
+              Placer automatiquement
+            </Button>
+            <Button
+              variant={autoOptimizeEnabled ? 'outlined' : 'contained'}
+              color={autoOptimizeEnabled ? 'secondary' : 'inherit'}
+              onClick={() => setAutoOptimizeEnabled(prev => !prev)}
+            >
+              {autoOptimizeEnabled ? 'Optimisation planifiée activée' : 'Activer l\'optimisation planifiée'}
+            </Button>
+          </Box>
+        </Paper>
+
+        {inventoryMode && (
+          <Paper sx={{ mb: 3, p: 2 }} variant="outlined">
+            <Typography variant="subtitle1" gutterBottom>
+              Mode inventaire groupé
+            </Typography>
+            <Box display="flex" gap={2} flexWrap="wrap">
+              {Object.entries(inventoryGroups).map(([key, group]) => (
+                <Paper key={key} variant="outlined" sx={{ p: 1.5, minWidth: 180 }}>
+                  <Typography variant="body1" fontWeight={600}>{group[0]?.wine?.name || 'Lot'}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {group[0]?.wine?.vintage || 'NV'} · {group.length} bouteille(s)
+                  </Typography>
+                </Paper>
+              ))}
+              {Object.keys(inventoryGroups).length === 0 && (
+                <Typography variant="body2" color="text.secondary">
+                  Aucun lot à regrouper.
+                </Typography>
+              )}
+            </Box>
+          </Paper>
+        )}
+
         {/* Menu d'actions simplifié pour les écrans plus grands */}
         {!isSmallScreen && (
-          <SimplifiedActionMenu 
+          <SimplifiedActionMenu
             onSearch={handleSearch}
             onFilter={handleFilter}
             onOptimize={handleOptimizePlacement}
@@ -423,6 +643,7 @@ export default function StorageManagement() {
                   onTabChange={handleChangeTab}
                   displayMode={displayMode}
                   onPositionClick={handlePositionClick}
+                  onOpenQuickAdd={handleOpenQuickAddDialog}
                   hoveredPositionInfo={hoveredPositionInfo}
                   onPositionHover={setHoveredPositionInfo}
                   onBottleAdded={handleDataRefresh}
@@ -434,7 +655,7 @@ export default function StorageManagement() {
         {/* Menu d'actions flottant pour les petits écrans ou en mode compact */}
         {isSmallScreen ? (
           // Version simplifiée pour mobile
-          <SimplifiedActionMenu 
+          <SimplifiedActionMenu
             onSearch={handleSearch}
             onFilter={handleFilter}
             onOptimize={handleOptimizePlacement}
@@ -447,7 +668,7 @@ export default function StorageManagement() {
           />
         ) : (
           // Version complète pour desktop
-          <EnhancedSpeedDialMenu 
+          <EnhancedSpeedDialMenu
             onSearch={handleSearch}
             onFilter={handleFilter}
             onInventoryToggle={setInventoryMode}
@@ -455,7 +676,7 @@ export default function StorageManagement() {
             onAperitifSuggestions={handleAperitifSuggestions}
             displayMode={displayMode}
             onDisplayModeChange={handleDisplayModeChange}
-            activeFilters={filters.colors.concat(filters.labels)}
+            activeFilters={filterBadge}
             inventoryMode={inventoryMode}
           />
         )}
@@ -502,6 +723,34 @@ export default function StorageManagement() {
           open={aperitifDialogOpen}
           onClose={() => setAperitifDialogOpen(false)}
           suggestions={aperitifSuggestions}
+        />
+
+        <QuickAddDialog
+          open={quickAddDialogOpen}
+          onClose={() => setQuickAddDialogOpen(false)}
+          selectedPosition={quickAddPosition}
+          onBottleAdded={() => {
+            setQuickAddDialogOpen(false);
+            handleDataRefresh();
+          }}
+        />
+
+        <SearchDialog
+          open={searchDialogOpen}
+          onClose={() => setSearchDialogOpen(false)}
+          mode="bottle"
+          onBottleSelect={(bottle) => {
+            setSelectedBottle(bottle);
+            setDialogOpen(true);
+          }}
+        />
+
+        <FilterDialog
+          open={filterDialogOpen}
+          onClose={() => setFilterDialogOpen(false)}
+          filters={filters}
+          onApplyFilters={handleApplyFilters}
+          vintageRange={vintageRange}
         />
         
         {/* Notification */}

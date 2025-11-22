@@ -43,6 +43,12 @@ type Wine = {
   color: string;
   image_url: string | null;
   price: number | null;
+  grapes?: string[] | null;
+  food_pairings?: string[] | null;
+  peak_year?: number | null;
+  stock_count?: number | null;
+  availability_score?: number | null;
+  vector_score?: number | null;
 };
 
 type Filters = {
@@ -75,6 +81,10 @@ export default function Wines() {
     severity: 'success'
   });
   const [uniqueRegions, setUniqueRegions] = useState<string[]>([]);
+  const [semanticMode, setSemanticMode] = useState(false);
+  const [semanticLoading, setSemanticLoading] = useState(false);
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
+  const [weightAvailability, setWeightAvailability] = useState(true);
   
   // Hooks React
   const router = useRouter();
@@ -94,43 +104,52 @@ export default function Wines() {
   }, []);
 
   // Fonction de récupération des vins
-  const fetchWines = useCallback(async () => {
+  const fetchWines = useCallback(async (options?: { semantic?: boolean; overrideSearch?: string }) => {
     setLoading(true);
+    setSemanticLoading(!!options?.semantic);
     try {
       // Vérification de l'authentification
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      
+
       if (userError) {
         console.error('Erreur d\'authentification:', userError.message);
         router.push('/login');
         return;
       }
-      
+
       if (!userData.user) {
         console.log('Aucun utilisateur connecté, redirection vers login');
         router.push('/login');
         return;
       }
 
-      // Récupération des vins
-      const { data, error } = await supabase
-        .from('wine')
-        .select('*')
-        .order('name');
-      
+      const term = options?.overrideSearch ?? searchTerm;
+      const rpcParams = {
+        search_term: term || null,
+        color_filter: filters.color || null,
+        region_filter: filters.region || null,
+        price_range: filters.priceRange || null,
+        sort_by: sortBy,
+        weight_availability: weightAvailability ? 1 : 0
+      };
+
+      const { data, error } = options?.semantic
+        ? await supabase.rpc('semantic_search_wines', { ...rpcParams, limit: 100 })
+        : await supabase.rpc('search_wines', rpcParams);
+
       if (error) {
         throw error;
       }
-      
-      setWines(data || []);
-      
-      // Extraction des régions uniques pour les filtres
-      const regions = data
-        ?.filter(wine => wine.region)
-        .map(wine => wine.region as string)
-        .filter((region, index, self) => self.indexOf(region) === index)
-        .sort() || [];
-      
+
+      setSemanticMode(!!options?.semantic);
+      setWines((data as Wine[]) || []);
+
+      const regions = (data || [])
+        .filter((wine: Wine) => wine.region)
+        .map((wine: Wine) => wine.region as string)
+        .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
+        .sort();
+
       setUniqueRegions(regions);
     } catch (error) {
       console.error('Erreur lors de la récupération des vins:', error);
@@ -138,13 +157,32 @@ export default function Wines() {
       showNotification(`Erreur: ${errorMessage}`, 'error');
     } finally {
       setLoading(false);
+      setSemanticLoading(false);
     }
-  }, [router, showNotification]);
+  }, [filters.color, filters.priceRange, filters.region, router, searchTerm, showNotification, sortBy, weightAvailability]);
 
   // Effet pour charger les vins au montage du composant
   useEffect(() => {
     fetchWines();
   }, [fetchWines]);
+
+  useEffect(() => {
+    if (searchTerm.length < 3) {
+      setAutocompleteSuggestions([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase.rpc('autocomplete_wines', { query_text: searchTerm });
+      if (error) return;
+      const suggestions = (data || []).map((item: { suggestion: string } | string) =>
+        typeof item === 'string' ? item : item.suggestion
+      );
+      setAutocompleteSuggestions(suggestions);
+    }, 250);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
   
   // Fonction pour trier les vins
   const getSortedWines = (winesToSort: Wine[]) => {
@@ -209,6 +247,81 @@ export default function Wines() {
       region: '',
       priceRange: ''
     });
+  };
+
+  const exportDataAsCSV = (rows: Wine[]) => {
+    const headers = ['Nom', 'Millésime', 'Domaine', 'Région', 'Appellation', 'Couleur', 'Prix', 'Cépages', 'Accords', 'Apogée', 'Stock', 'Disponibilité', 'Score vectoriel'];
+    const csv = [
+      headers.join(','),
+      ...rows.map(wine => [
+        wine.name,
+        wine.vintage ?? '',
+        wine.domain ?? '',
+        wine.region ?? '',
+        wine.appellation ?? '',
+        wine.color,
+        wine.price ?? '',
+        (wine.grapes || []).join('|'),
+        (wine.food_pairings || []).join('|'),
+        wine.peak_year ?? '',
+        wine.stock_count ?? '',
+        wine.availability_score ?? '',
+        wine.vector_score ?? ''
+      ].join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'vins.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportDataAsExcel = (rows: Wine[]) => {
+    const headers = ['Nom', 'Millésime', 'Domaine', 'Région', 'Appellation', 'Couleur', 'Prix', 'Cépages', 'Accords', 'Apogée', 'Stock', 'Disponibilité', 'Score vectoriel'];
+    const lines = rows.map(wine => [
+      wine.name,
+      wine.vintage ?? '',
+      wine.domain ?? '',
+      wine.region ?? '',
+      wine.appellation ?? '',
+      wine.color,
+      wine.price ?? '',
+      (wine.grapes || []).join('|'),
+      (wine.food_pairings || []).join('|'),
+      wine.peak_year ?? '',
+      wine.stock_count ?? '',
+      wine.availability_score ?? '',
+      wine.vector_score ?? ''
+    ].join(';'));
+
+    const content = [headers.join(';'), ...lines].join('\n');
+    const blob = new Blob([content], { type: 'application/vnd.ms-excel' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'vins.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const shareCurrentSearch = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('q', searchTerm);
+    url.searchParams.set('color', filters.color);
+    url.searchParams.set('region', filters.region);
+    url.searchParams.set('price', filters.priceRange);
+    url.searchParams.set('sort', sortBy);
+    url.searchParams.set('semantic', semanticMode ? '1' : '0');
+    await navigator.clipboard.writeText(url.toString());
+    showNotification('Lien de recherche copié', 'success');
   };
 
   // Gestionnaires d'événements
@@ -286,6 +399,23 @@ export default function Wines() {
                   className: "rounded-lg"
                 }}
               />
+              {autocompleteSuggestions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {autocompleteSuggestions.map(suggestion => (
+                    <Button
+                      key={suggestion}
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setSearchTerm(suggestion);
+                        fetchWines({ overrideSearch: suggestion, semantic: semanticMode });
+                      }}
+                    >
+                      {suggestion}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
             
             <FormControl className="min-w-[140px]">
@@ -302,8 +432,8 @@ export default function Wines() {
               </Select>
             </FormControl>
             
-            <Button 
-              variant="outlined" 
+            <Button
+              variant="outlined"
               className="rounded-lg border-gray-300 hover:border-wine-burgundy hover:bg-gray-50"
               startIcon={
                 <Badge badgeContent={getActiveFiltersCount()} color="primary">
@@ -314,8 +444,45 @@ export default function Wines() {
             >
               Filtres
             </Button>
+
+            <Button
+              variant={semanticMode ? 'contained' : 'outlined'}
+              color="secondary"
+              onClick={() => fetchWines({ semantic: true })}
+              disabled={semanticLoading}
+            >
+              Recherche sémantique
+            </Button>
+
+            <Button
+              variant="outlined"
+              color="inherit"
+              onClick={() => fetchWines({ semantic: false })}
+            >
+              Rafraîchir
+            </Button>
+
+            <Button
+              variant={weightAvailability ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => setWeightAvailability(prev => !prev)}
+            >
+              Pondérer par disponibilité
+            </Button>
           </div>
-          
+
+          <div className="flex flex-wrap gap-3 mt-4">
+            <Button variant="text" onClick={() => exportDataAsCSV(filteredWines)}>
+              Export CSV
+            </Button>
+            <Button variant="text" onClick={() => exportDataAsExcel(filteredWines)}>
+              Export Excel
+            </Button>
+            <Button variant="text" onClick={shareCurrentSearch}>
+              Partager la recherche
+            </Button>
+          </div>
+
           {showFilters && (
             <div className="mt-6">
               <Divider className="mb-4" />
