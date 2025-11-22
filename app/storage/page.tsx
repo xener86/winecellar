@@ -84,7 +84,6 @@ export default function StorageManagement() {
     positions,
     bottles,
     unassignedBottles,
-    locationBottleCounts,
     setBottles,
     loading,
     positionLoading,
@@ -117,7 +116,6 @@ export default function StorageManagement() {
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [vintageRange, setVintageRange] = useState<{ min: number; max: number }>({ min: 1980, max: new Date().getFullYear() });
   const [autoOptimizeEnabled, setAutoOptimizeEnabled] = useState(true);
-  const [suggestedPlacements, setSuggestedPlacements] = useState<Record<string, Position>>({});
   const [inventoryGroups, setInventoryGroups] = useState<Record<string, Bottle[]>>({});
   const optimizationTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -126,7 +124,6 @@ export default function StorageManagement() {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [apiKey, setApiKey] = useState('');
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [filters, setFilters] = useState<FilterOptions>({
     colors: [],
     labels: [],
@@ -171,29 +168,6 @@ export default function StorageManagement() {
 
     setInventoryGroups(grouped);
   }, [inventoryMode, bottles, unassignedBottles]);
-
-  const computeSuggestedPlacements = useCallback(() => {
-    if (!selectedLocation) return;
-
-    const sortedEmpty = [...emptyPositions].sort((a, b) =>
-      a.row_position === b.row_position
-        ? a.column_position - b.column_position
-        : a.row_position - b.row_position
-    );
-
-    const placements: Record<string, Position> = {};
-    unassignedBottles.forEach((bottle, index) => {
-      if (sortedEmpty[index]) {
-        placements[bottle.id] = sortedEmpty[index];
-      }
-    });
-
-    setSuggestedPlacements(placements);
-  }, [selectedLocation, emptyPositions, unassignedBottles]);
-
-  useEffect(() => {
-    computeSuggestedPlacements();
-  }, [computeSuggestedPlacements]);
 
   useEffect(() => {
     if (!inventoryMode) return;
