@@ -169,11 +169,6 @@ export default function StorageManagement() {
     setInventoryGroups(grouped);
   }, [inventoryMode, bottles, unassignedBottles]);
 
-  useEffect(() => {
-    if (!inventoryMode) return;
-    handleAutoPlacement();
-  }, [handleAutoPlacement, inventoryMode]);
-
   // Récupérer les clés API
   const fetchAPIKeys = useCallback(async () => {
     try {
@@ -275,7 +270,13 @@ export default function StorageManagement() {
       showNotification(`Erreur: ${error instanceof Error ? error.message : 'Placement impossible'}`, 'error');
     }
   }, [emptyPositions, fetchPositionsAndBottles, filters, selectedLocation, showNotification, unassignedBottles]);
-  
+
+  useEffect(() => {
+    if (!inventoryMode) return;
+
+    handleAutoPlacement();
+  }, [handleAutoPlacement, inventoryMode]);
+
   // Marquer une bouteille comme consommée
   const handleConsumeBottle = async () => {
     if (!selectedBottle) return;
