@@ -99,10 +99,10 @@ export default function Navbar() {
     },
     { label: 'ACCORDS METS-VINS', icon: <RestaurantIcon />, path: '/food-pairing' },
     { label: 'DÉGUSTATIONS', icon: <LocalBarIcon />, path: '/tasting-notes' },
-    { 
-      label: 'ANALYSES & SUGGESTIONS', 
-      icon: <PieChartIcon />, 
-      path: '/insights' 
+    {
+      label: 'ANALYSES & SUGGESTIONS',
+      icon: <PieChartIcon />,
+      path: '/insights'
     },
   ];
 

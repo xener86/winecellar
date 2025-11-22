@@ -153,19 +153,23 @@ const AddStorageModal: React.FC<AddStorageModalProps> = ({
       
       const now = new Date().toISOString();
       
+      // Préparer les données avec les noms de colonnes corrects (snake_case)
+      const dbData = {
+        name: formData.name,
+        type: formData.type,
+        layout: formData.layout,
+        row_count: formData.layout === 'grid' ? formData.rowCount : null, // snake_case
+        column_count: formData.layout === 'grid' ? formData.columnCount : null, // snake_case
+        description: formData.description,
+        user_id: user.id, // snake_case
+        updated_at: now // snake_case
+      };
+      
       if (initialData) {
         // Mise à jour d'un emplacement existant
         const { error } = await supabase
           .from('spirit_storage_locations')
-          .update({
-            name: formData.name,
-            type: formData.type,
-            layout: formData.layout,
-            rowCount: formData.layout === 'grid' ? formData.rowCount : null,
-            columnCount: formData.layout === 'grid' ? formData.columnCount : null,
-            description: formData.description,
-            updatedAt: now
-          })
+          .update(dbData)
           .eq('id', initialData.id);
         
         if (error) throw error;
@@ -174,15 +178,8 @@ const AddStorageModal: React.FC<AddStorageModalProps> = ({
         const { error } = await supabase
           .from('spirit_storage_locations')
           .insert({
-            name: formData.name,
-            type: formData.type,
-            layout: formData.layout,
-            rowCount: formData.layout === 'grid' ? formData.rowCount : null,
-            columnCount: formData.layout === 'grid' ? formData.columnCount : null,
-            description: formData.description,
-            userId: user.id,
-            createdAt: now,
-            updatedAt: now
+            ...dbData,
+            created_at: now // snake_case
           });
         
         if (error) throw error;

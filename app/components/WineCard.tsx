@@ -2,7 +2,7 @@
 // app/components/WineCard.tsx
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import AutoWineLabel from './AutoWineLabel';
 import { Chip } from '@mui/material';
 import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import PlaceIcon from '@mui/icons-material/Place';
@@ -16,19 +16,17 @@ type WineCardProps = {
   region?: string | null;
   appellation?: string | null;
   price?: number | null;
-  imageUrl?: string | null;
 };
 
 export default function WineCard({ 
-  id, 
-  name, 
-  color, 
-  vintage, 
-  domain, 
-  region, 
-  appellation, 
-  price, 
-  imageUrl 
+  id,
+  name,
+  color,
+  vintage,
+  domain,
+  region,
+  appellation,
+  price
 }: WineCardProps) {
   
   // Fonction pour obtenir les styles de couleur de vin
@@ -50,14 +48,13 @@ export default function WineCard({
     <Link href={`/wines/${id}`} className="block group">
       <div className="wine-card h-full flex flex-col">
         <div className="relative">
-          {/* Image container avec taille fixe */}
+          {/* Affichage de l'étiquette automatique */}
           <div className="aspect-[2/3] w-full bg-gray-100 overflow-hidden flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={imageUrl || 'https://placehold.co/300x450/EAEAEA/333333?text=Vin'}
-              alt={name}
-              className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
-              loading="lazy"
+            <AutoWineLabel
+              name={name}
+              vintage={vintage ?? undefined}
+              region={region ?? undefined}
+              color={color}
             />
           </div>
           

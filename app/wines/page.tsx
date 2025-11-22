@@ -714,7 +714,6 @@ export default function Wines() {
                   region={wine.region}
                   appellation={wine.appellation}
                   price={wine.price}
-                  imageUrl={wine.image_url}
                 />
               ))}
             </div>

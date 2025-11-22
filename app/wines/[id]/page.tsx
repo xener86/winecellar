@@ -18,7 +18,6 @@ import Navbar from '../../components/Navbar';
 import { supabase } from '../../utils/supabase';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import WineAgingCurve from '../../components/WineAgingCurve';
 import TastingRadarChart from '../../components/TastingRadarChart';
 import AppellationInfo from '../../components/AppellationInfo';
@@ -569,21 +568,9 @@ export default function WineDetail() {
             {/* Visualisation de la bouteille */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex flex-col items-center">
               <div className="h-64 flex items-center justify-center">
-                {wine.image_url ? (
-                  <div className="h-full w-full relative">
-                    <Image 
-                      src={wine.image_url} 
-                      alt={wine.name} 
-                      fill
-                      style={{ objectFit: 'contain' }}
-                      sizes="(max-width: 768px) 100vw, 300px"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-full w-32 flex items-center justify-center">
-                    {renderWineBottle(wine)}
-                  </div>
-                )}
+                <div className="h-full w-32 flex items-center justify-center">
+                  {renderWineBottle(wine)}
+                </div>
               </div>
             </div>
 

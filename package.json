@@ -18,7 +18,7 @@
         "@mui/material-nextjs": "^7.0.0",
         "@mui/x-date-pickers": "^7.28.0",
         "@supabase/auth-helpers-nextjs": "^0.10.0",
-        "@supabase/supabase-js": "^2.49.4",
+        "@supabase/supabase-js": "^2.50.0",
         "date-fns": "^2.30.0",
         "dotenv": "^16.4.7",
         "html2canvas": "^1.4.1",
