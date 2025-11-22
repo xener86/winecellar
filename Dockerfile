@@ -45,15 +45,15 @@ ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Créer le dossier public/images avec les bonnes permissions
-RUN mkdir -p /app/public/images && chown -R nextjs:nodejs /app/public
-
-# Copier les fichiers nécessaires depuis le builder
-COPY --from=builder /app/public ./public
-
-# Copier les fichiers Next.js standalone
+# Copier les fichiers Next.js standalone EN PREMIER
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copier les fichiers publics APRÈS
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+
+# S'assurer que le dossier images existe avec les bonnes permissions
+RUN mkdir -p ./public/images && chown -R nextjs:nodejs ./public
 
 USER nextjs
 
