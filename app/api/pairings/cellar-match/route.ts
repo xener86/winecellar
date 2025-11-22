@@ -31,7 +31,19 @@ export async function POST(req: NextRequest) {
     // Récupérer les vins de la cave de l'utilisateur
     const { data: bottlesData, error: bottlesError } = await supabase
       .from('bottle')
-      .select(`id, wine_id, position_id, status, wine:wine_id(*)`)
+      .select(`
+        id,
+        wine_id,
+        position_id,
+        status,
+        wine:wine_id(*),
+        position:position_id (
+          id,
+          row_position,
+          column_position,
+          storage_location:storage_location_id ( id, name, type )
+        )
+      `)
       .eq('status', 'in_stock')
       .eq('user_id', userId);
 
@@ -52,7 +64,15 @@ export async function POST(req: NextRequest) {
     // Formater les bouteilles pour l'envoi à l'API
     const cellarWines = bottlesData.map(b => ({
       ...b,
-      wine: Array.isArray(b.wine) ? b.wine[0] : b.wine
+      wine: Array.isArray(b.wine) ? b.wine[0] : b.wine,
+      position: b.position
+        ? {
+            ...b.position,
+            storage_location: Array.isArray(b.position.storage_location)
+              ? b.position.storage_location[0]
+              : b.position.storage_location
+          }
+        : null
     }));
 
     console.log(`${cellarWines.length} bouteilles trouvées dans la cave`);
@@ -75,7 +95,7 @@ ${JSON.stringify(wineRecommendations.map((r: WineRecommendation) => ({
   pairing_type: r.pairing_type
 })), null, 2)}
 
-Voici les bouteilles disponibles dans ma cave :
+Voici les bouteilles disponibles dans ma cave (utilise uniquement ces identifiants) :
 ${JSON.stringify(cellarWines.map(b => ({
   id: b.id,
   wine_id: b.wine_id,
@@ -85,11 +105,18 @@ ${JSON.stringify(cellarWines.map(b => ({
   domain: b.wine?.domain,
   region: b.wine?.region,
   appellation: b.wine?.appellation,
-  country: b.wine?.country
+  country: b.wine?.country,
+  position: b.position ? {
+    id: b.position.id,
+    row: b.position.row_position,
+    column: b.position.column_position,
+    storage: b.position.storage_location?.name,
+    type: b.position.storage_location?.type
+  } : null
 })), null, 2)}
 
 Pour chaque type de vin recommandé, trouve la ou les bouteilles correspondantes dans ma cave qui seraient les plus adaptées.
-Si aucune correspondance parfaite n'est trouvée, suggère la meilleure alternative en expliquant pourquoi.
+Si aucune correspondance parfaite n'est trouvée, suggère la meilleure alternative en expliquant pourquoi. Mets en avant l'emplacement (rangée/colonne et nom de la zone) pour chaque bouteille trouvée.
 
 Réponds au format JSON :
 [
@@ -112,7 +139,13 @@ Réponds au format JSON :
           "vintage": 2018
         },
         "match_quality": "perfect" | "good" | "alternative",
-        "explanation": "Explication de la correspondance ou de l'alternative"
+        "explanation": "Explication de la correspondance ou de l'alternative",
+        "position": {
+          "label": "Nom de l'emplacement et coordonnées lisibles",
+          "storage": "Nom de la zone de stockage",
+          "row": "Numéro de rangée",
+          "column": "Numéro de colonne"
+        }
       }
     ]
   }
@@ -177,17 +210,63 @@ Réponds au format JSON :
       
       const parsed = JSON.parse(responseText);
       
+// Préparer une map pour enrichir les correspondances avec les données exactes de la base
+const bottleMap = new Map(
+  cellarWines.map(bottle => [
+    bottle.id,
+    {
+      bottle_id: bottle.id,
+      wine_id: bottle.wine_id,
+      wine: bottle.wine,
+      position: bottle.position,
+    }
+  ])
+);
+
 // Enrichir la réponse avec les objets de recommandation complets
 const enrichedResponse = parsed.map((match: Record<string, unknown>, index: number) => {
   const originalRec = wineRecommendations[index] || wineRecommendations[0];
   const matchRecommendation = typeof match.recommendation === 'object' && match.recommendation ? match.recommendation : {};
-  
+
+  const matches = Array.isArray(match.matches)
+    ? match.matches
+        .map((bottleMatch: Record<string, unknown>) => {
+          const bottleId = typeof bottleMatch.bottle_id === 'string' ? bottleMatch.bottle_id : undefined;
+          const fromDb = bottleId ? bottleMap.get(bottleId) : undefined;
+
+          if (!fromDb) return null;
+
+          const position = fromDb.position;
+          const positionLabel = position?.storage_location?.name
+            ? `${position.storage_location.name} • Rang ${position.row_position ?? '-'} / Col ${position.column_position ?? '-'}`
+            : undefined;
+
+          return {
+            bottle_id: fromDb.bottle_id,
+            wine_id: fromDb.wine_id,
+            wine: fromDb.wine,
+            match_quality: (typeof bottleMatch.match_quality === 'string' ? bottleMatch.match_quality : 'alternative') as string,
+            explanation: typeof bottleMatch.explanation === 'string' ? bottleMatch.explanation : "Sélection basée sur les critères d'accord.",
+            position: position
+              ? {
+                  label: positionLabel,
+                  storage: position.storage_location?.name,
+                  row: position.row_position,
+                  column: position.column_position,
+                  type: position.storage_location?.type,
+                }
+              : undefined,
+          };
+        })
+        .filter(Boolean)
+    : [];
+
   return {
     recommendation: {
       ...originalRec,
       ...(matchRecommendation as Record<string, unknown>)
     },
-    matches: Array.isArray(match.matches) ? match.matches : []
+    matches,
   };
 });
       

@@ -1,14 +1,14 @@
 'use client';
 
 import React from 'react';
-import { 
-  Grid, 
-  Typography, 
-  Paper, 
-  Box, 
+import {
+  Grid,
+  Typography,
+  Paper,
+  Box,
   Button,
   Chip,
-  Divider 
+  Divider
 } from '@mui/material';
 import { WineRecommendation } from '@/utils/types';
 
@@ -60,20 +60,29 @@ export default function WineRecommendations({
 
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h5" gutterBottom>
+      <Box
+        sx={{
+          mb: 4,
+          p: 3,
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, rgba(112,26,67,0.08), rgba(30,41,59,0.07))',
+          border: 1,
+          borderColor: 'divider',
+        }}
+      >
+        <Typography variant="h5" gutterBottom fontWeight={700}>
           Suggestions de vins pour : <strong>{foodQuery}</strong>
         </Typography>
         <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          Voici des recommandations générales d&apos;accords mets-vins. Ces suggestions 
-          sont basées sur des principes œnologiques et gastronomiques.
+          Une sélection générée par l&apos;IA, affinée selon le style de cuisine, la structure du plat
+          et les associations aromatiques classiques. Passez à l&apos;étape suivante pour trouver les bouteilles exactes dans votre cave.
         </Typography>
-        <Button 
-          variant="contained" 
-          color="secondary" 
+        <Button
+          variant="contained"
+          color="secondary"
           onClick={onCheckCellar}
           disabled={loading}
-          sx={{ mb: 2 }}
+          sx={{ mb: 1.5, boxShadow: 2, textTransform: 'none', px: 3 }}
         >
           Vérifier les correspondances dans ma cave
         </Button>
@@ -87,8 +96,8 @@ export default function WineRecommendations({
           <Grid container spacing={2}>
             {recs.map((rec, index) => (
               <Grid component="div" sx={{ width: { xs: '100%', md: '50%' } }} key={index}>
-                <Paper sx={{ p: 3, height: '100%' }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                <Paper sx={{ p: 3, height: '100%', borderRadius: 3, border: 1, borderColor: 'divider', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                     <Typography variant="h6" fontWeight="bold">
                       {rec.wine_type}
                     </Typography>

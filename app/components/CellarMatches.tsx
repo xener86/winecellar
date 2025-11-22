@@ -207,7 +207,7 @@ export default function CellarMatches({
 
               <Divider sx={{ my: 2 }} />
 
-              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600 }}>
                 Bouteilles correspondantes dans votre cave :
               </Typography>
 
@@ -226,17 +226,19 @@ export default function CellarMatches({
                       <ListItem
                         key={idx}
                         sx={{
-                          bgcolor: 'background.paper',
-                          mb: 1,
+                          background: 'linear-gradient(135deg, rgba(112,26,67,0.04), rgba(30,41,59,0.03))',
+                          mb: 1.5,
                           border: 1,
                           borderColor: 'divider',
-                          borderRadius: 1
+                          borderRadius: 2,
+                          px: { xs: 2, md: 3 },
+                          py: 2,
                         }}
                       >
                         <Grid container spacing={2}>
-                        <Grid component="div" sx={{ width: { xs: '100%', sm: '66,67' } }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <WineBarIcon sx={{ mr: 1 }} />
+                          <Grid component="div" item xs={12} sm={8}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1 }}>
+                              <WineBarIcon sx={{ color: 'primary.main' }} />
                               <ListItemText
                                 primary={
                                   <Typography variant="subtitle1" fontWeight="medium">
@@ -245,15 +247,21 @@ export default function CellarMatches({
                                 }
                                 secondary={
                                   <>
-                                    <Box sx={{ display: 'flex', mb: 1, mt: 1 }}>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, my: 1 }}>
                                       <Chip
                                         label={getMatchQualityLabel(bottleMatch.match_quality)}
                                         color={getMatchQualityColor(bottleMatch.match_quality)}
                                         size="small"
-                                        sx={{ mr: 1 }}
                                       />
+                                      {bottleMatch.position?.label && (
+                                        <Chip
+                                          label={bottleMatch.position.label}
+                                          variant="outlined"
+                                          size="small"
+                                        />
+                                      )}
                                     </Box>
-                                    <Typography variant="body2">
+                                    <Typography variant="body2" color="text.secondary">
                                       {bottleMatch.explanation || "Pas d'explication disponible"}
                                     </Typography>
                                   </>
@@ -261,8 +269,13 @@ export default function CellarMatches({
                               />
                             </Box>
                           </Grid>
-                          <Grid component="div" sx={{ width: { xs: '100%', sm: '33,33%' } }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Grid component="div" item xs={12} sm={4}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: { xs: 'flex-start', sm: 'flex-end' }, gap: 1 }}>
+                              {bottleMatch.position?.storage && (
+                                <Typography variant="body2" color="text.secondary">
+                                  Zone : {bottleMatch.position.storage}
+                                </Typography>
+                              )}
                               <Tooltip
                                 title={
                                   isPairingSaved(bottleMatch.wine_id)
@@ -275,6 +288,7 @@ export default function CellarMatches({
                                     handleSave(bottleMatch, match.recommendation.pairing_type as 'classic' | 'audacious' | 'heart')
                                   }
                                   size="small"
+                                  sx={{ border: 1, borderColor: 'divider' }}
                                 >
                                   {isPairingSaved(bottleMatch.wine_id) ? (
                                     <BookmarkIcon color="primary" />
@@ -285,7 +299,7 @@ export default function CellarMatches({
                               </Tooltip>
 
                               {bottleMatch.wine_id && (
-                                <Box sx={{ mt: 1 }}>
+                                <Box sx={{ mt: 0.5 }}>
                                   <Typography variant="body2" sx={{ mb: 0.5 }}>
                                     Votre note :
                                   </Typography>
