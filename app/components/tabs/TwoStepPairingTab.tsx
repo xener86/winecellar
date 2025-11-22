@@ -150,6 +150,10 @@ export default function TwoStepPairingTab({
             {recommendationsLoading ? 'Recherche...' : 'Rechercher'}
           </Button>
         </Box>
+
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+          L’IA analyse en priorité vos bouteilles disponibles et leurs emplacements pour proposer l’accord idéal.
+        </Typography>
       </Box>
 
       {wineRecommendations.length > 0 && !showCellarMatches && (

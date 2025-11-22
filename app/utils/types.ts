@@ -60,6 +60,9 @@ export interface BottleMatch {
   wine: DBWine;
   match_quality: 'perfect' | 'good' | 'alternative';
   explanation: string;
+  position?: Position;
+  storage_location?: StorageLocation;
+  location_label?: string;
 }
 
 // ---------------------------------------------

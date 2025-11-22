@@ -14,13 +14,16 @@ import {
   Rating,
   IconButton,
   Tooltip,
-  Alert
+  Alert,
+  ChipProps
 } from '@mui/material';
 
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import WineBarIcon from '@mui/icons-material/WineBar';
 import InfoIcon from '@mui/icons-material/Info';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import HomeWorkOutlinedIcon from '@mui/icons-material/HomeWorkOutlined';
 
 import { CellarMatch, FoodPairing, BottleMatch, DBWine } from '@/utils/types';
 
@@ -38,7 +41,7 @@ interface CellarMatchesProps {
   savedPairings: FoodPairing[];
 }
 
-const getMatchQualityColor = (quality: string): "success" | "info" | "warning" | "default" => {
+const getMatchQualityColor = (quality: string): ChipProps['color'] => {
   switch (quality) {
     case 'perfect': return 'success';
     case 'good': return 'info';
@@ -189,15 +192,29 @@ export default function CellarMatches({
 
         return (
           <Box key={index} sx={{ mb: 4 }}>
-            <Paper sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h6" fontWeight="bold">
-                  {match.recommendation.wine_type || 'Type de vin non précisé'}
-                </Typography>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                border: 1,
+                borderColor: 'divider',
+                background: 'linear-gradient(135deg, rgba(123,31,162,0.03), rgba(255,255,255,0.9))'
+              }}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 1 }}>
+                    Recommandation {index + 1}
+                  </Typography>
+                  <Typography variant="h6" fontWeight="bold">
+                    {match.recommendation.wine_type || 'Type de vin non précisé'}
+                  </Typography>
+                </Box>
                 <Chip
                   label={getPairingTypeLabel(match.recommendation.pairing_type)}
                   color={getPairingTypeColor(match.recommendation.pairing_type)}
                   size="small"
+                  variant="outlined"
                 />
               </Box>
 
@@ -234,9 +251,9 @@ export default function CellarMatches({
                         }}
                       >
                         <Grid container spacing={2}>
-                        <Grid component="div" sx={{ width: { xs: '100%', sm: '66,67' } }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                              <WineBarIcon sx={{ mr: 1 }} />
+                          <Grid component="div" sx={{ width: { xs: '100%', sm: '66.67%' } }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, gap: 1 }}>
+                              <WineBarIcon sx={{ color: 'primary.main' }} />
                               <ListItemText
                                 primary={
                                   <Typography variant="subtitle1" fontWeight="medium">
@@ -245,24 +262,39 @@ export default function CellarMatches({
                                 }
                                 secondary={
                                   <>
-                                    <Box sx={{ display: 'flex', mb: 1, mt: 1 }}>
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1, mt: 1 }}>
                                       <Chip
                                         label={getMatchQualityLabel(bottleMatch.match_quality)}
                                         color={getMatchQualityColor(bottleMatch.match_quality)}
                                         size="small"
-                                        sx={{ mr: 1 }}
                                       />
+                                      {bottleMatch.location_label && (
+                                        <Chip
+                                          icon={<HomeWorkOutlinedIcon fontSize="small" />}
+                                          label={bottleMatch.location_label}
+                                          size="small"
+                                          variant="outlined"
+                                        />
+                                      )}
                                     </Box>
                                     <Typography variant="body2">
                                       {bottleMatch.explanation || "Pas d'explication disponible"}
                                     </Typography>
+                                    {bottleMatch.position && (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
+                                        <LocationOnOutlinedIcon color="action" fontSize="small" />
+                                        <Typography variant="body2" color="text.secondary">
+                                          Rang {bottleMatch.position.row_position}, Colonne {bottleMatch.position.column_position}
+                                        </Typography>
+                                      </Box>
+                                    )}
                                   </>
                                 }
                               />
                             </Box>
                           </Grid>
-                          <Grid component="div" sx={{ width: { xs: '100%', sm: '33,33%' } }}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                          <Grid component="div" sx={{ width: { xs: '100%', sm: '33.33%' } }}>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
                               <Tooltip
                                 title={
                                   isPairingSaved(bottleMatch.wine_id)
@@ -275,9 +307,10 @@ export default function CellarMatches({
                                     handleSave(bottleMatch, match.recommendation.pairing_type as 'classic' | 'audacious' | 'heart')
                                   }
                                   size="small"
+                                  color={isPairingSaved(bottleMatch.wine_id) ? 'primary' : 'default'}
                                 >
                                   {isPairingSaved(bottleMatch.wine_id) ? (
-                                    <BookmarkIcon color="primary" />
+                                    <BookmarkIcon />
                                   ) : (
                                     <BookmarkBorderIcon />
                                   )}
