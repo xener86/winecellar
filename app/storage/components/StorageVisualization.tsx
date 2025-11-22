@@ -31,6 +31,7 @@ interface Props {
   onTabChange: (e: React.SyntheticEvent, val: number) => void;
   displayMode: string;
   onPositionClick: (position: Position) => void;
+  onOpenQuickAdd?: (position: Position) => void;
   hoveredPositionInfo: { row: number; col: number } | null;
   onPositionHover: (info: { row: number; col: number } | null) => void;
   onBottleAdded?: () => void;
@@ -45,6 +46,7 @@ const StorageVisualization: React.FC<Props> = ({
   onTabChange,
   displayMode,
   onPositionClick,
+  onOpenQuickAdd,
   hoveredPositionInfo,
   onPositionHover,
   onBottleAdded
@@ -175,8 +177,12 @@ const StorageVisualization: React.FC<Props> = ({
                       if (bottle) {
                         onPositionClick(position);
                       } else {
-                        setSelectedPosition(position);
-                        setShowQuickAdd(true);
+                        if (onOpenQuickAdd) {
+                          onOpenQuickAdd(position);
+                        } else {
+                          setSelectedPosition(position);
+                          setShowQuickAdd(true);
+                        }
                       }
                     }
                   }}

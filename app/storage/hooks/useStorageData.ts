@@ -1,5 +1,5 @@
 // File: app/storage/hooks/useStorageData.ts
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../utils/supabase';
 import { StorageLocation, Position, Bottle, FilterOptions } from '@types';
@@ -13,6 +13,8 @@ export const useStorageData = () => {
   const [selectedLocation, setSelectedLocation] = useState<StorageLocation | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [bottles, setBottles] = useState<Bottle[]>([]);
+  const [unassignedBottles, setUnassignedBottles] = useState<Bottle[]>([]);
+  const [locationBottleCounts, setLocationBottleCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [positionLoading, setPositionLoading] = useState(false);
   
@@ -80,10 +82,22 @@ export const useStorageData = () => {
         .map(bottle => ({
           ...bottle,
           position: positionsData?.find(pos => pos.id === bottle.position_id),
-          wine: bottle.wine || undefined 
+          wine: bottle.wine || undefined
         }));
-         
-      setBottles(bottlesWithPosition as Bottle[]); 
+
+      const generalStock = (bottlesData || [])
+        .filter(bottle => !bottle.position_id && bottle.status === 'in_stock')
+        .map(bottle => ({
+          ...bottle,
+          wine: bottle.wine || undefined
+        }));
+
+      setBottles(bottlesWithPosition as Bottle[]);
+      setUnassignedBottles(generalStock as Bottle[]);
+      setLocationBottleCounts(prev => ({
+        ...prev,
+        [locationId]: bottlesWithPosition.length
+      }));
       
     } catch (error: unknown) { 
       console.error('Erreur chargement positions/bouteilles:', error);
@@ -147,19 +161,26 @@ export const useStorageData = () => {
       const positionIds = positionIdsData?.map(p => p.id) || [];
 
       let bottleCount = 0;
+      let nonStockCount = 0;
       if (positionIds.length > 0) {
-        const { count, error: countError } = await supabase
-          .from('bottle').select('id', { count: 'exact', head: true })
-          .eq('status', 'in_stock').in('position_id', positionIds);
+        const { data: bottlesInLocation, count, error: countError } = await supabase
+          .from('bottle')
+          .select('id,status', { count: 'exact' })
+          .in('position_id', positionIds);
+
         if (countError) throw countError;
         bottleCount = count || 0;
+        nonStockCount = (bottlesInLocation || []).filter(b => b.status !== 'in_stock').length;
       }
 
       // Confirmation utilisateur
       let confirmDelete = false;
       if (bottleCount > 0) {
+        const warning = nonStockCount > 0
+          ? `Attention: ${nonStockCount} bouteille(s) ne sont pas en stock (statut différent). Elles seront détachées avant suppression.\n\n`
+          : '';
         confirmDelete = window.confirm(
-          `Cet emplacement contient ${bottleCount} bouteille(s). Les déplacer vers le stock général et supprimer l'emplacement ?`
+          `${warning}Cet emplacement contient ${bottleCount} bouteille(s). Les déplacer vers le stock général et supprimer l'emplacement ?`
         );
         if (confirmDelete) {
           const { error: updateError } = await supabase
@@ -211,6 +232,8 @@ export const useStorageData = () => {
     setSelectedLocation,
     positions,
     bottles,
+    unassignedBottles,
+    locationBottleCounts,
     setBottles,
     loading,
     positionLoading,
