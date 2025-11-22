@@ -103,6 +103,40 @@ export default function Wines() {
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
 
+  const fetchWineFallback = useCallback(async (term: string | null) => {
+    let query = supabase
+      .from('wine')
+      .select('*');
+
+    if (term) {
+      query = query.ilike('name', `%${term}%`);
+    }
+
+    if (filters.color) {
+      query = query.eq('color', filters.color);
+    }
+
+    if (filters.region) {
+      query = query.ilike('region', `%${filters.region}%`);
+    }
+
+    if (filters.priceRange) {
+      if (filters.priceRange === 'budget') query = query.lte('price', 15);
+      else if (filters.priceRange === 'medium') query = query.gte('price', 15).lte('price', 50);
+      else if (filters.priceRange === 'premium') query = query.gte('price', 50);
+    }
+
+    if (sortBy === 'name') query = query.order('name');
+    else if (sortBy === 'vintage') query = query.order('vintage', { ascending: false });
+    else if (sortBy === 'price') query = query.order('price', { ascending: false });
+
+    if (weightAvailability) {
+      query = query.order('availability_score', { ascending: false, nullsFirst: false });
+    }
+
+    return query;
+  }, [filters.color, filters.priceRange, filters.region, sortBy, weightAvailability]);
+
   // Fonction de récupération des vins
   const fetchWines = useCallback(async (options?: { semantic?: boolean; overrideSearch?: string }) => {
     setLoading(true);
@@ -137,6 +171,21 @@ export default function Wines() {
         ? await supabase.rpc('semantic_search_wines', { ...rpcParams, limit: 100 })
         : await supabase.rpc('search_wines', rpcParams);
 
+      if (error?.code === 'PGRST202') {
+        const { data: fallbackData, error: fallbackError } = await fetchWineFallback(term || null);
+        if (fallbackError) throw fallbackError;
+
+        setSemanticMode(false);
+        setWines((fallbackData as Wine[]) || []);
+        const regions = (fallbackData || [])
+          .filter((wine: Wine) => wine.region)
+          .map((wine: Wine) => wine.region as string)
+          .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
+          .sort();
+        setUniqueRegions(regions);
+        return;
+      }
+
       if (error) {
         throw error;
       }
@@ -159,7 +208,7 @@ export default function Wines() {
       setLoading(false);
       setSemanticLoading(false);
     }
-  }, [filters.color, filters.priceRange, filters.region, router, searchTerm, showNotification, sortBy, weightAvailability]);
+  }, [fetchWineFallback, filters.color, filters.priceRange, filters.region, router, searchTerm, showNotification, sortBy, weightAvailability]);
 
   // Effet pour charger les vins au montage du composant
   useEffect(() => {
