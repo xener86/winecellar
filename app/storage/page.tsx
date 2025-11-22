@@ -202,6 +202,52 @@ export default function StorageManagement() {
     fetchAPIKeys();
   }, [fetchLocations, fetchAPIKeys]);
 
+  // Optimisation du placement des bouteilles
+  const handleOptimizePlacement = useCallback(async () => {
+    if (!selectedLocation || bottles.length === 0) {
+      showNotification('Aucune bouteille à optimiser', 'info');
+      return;
+    }
+
+    const sortedPositions = [...positions].sort((a, b) =>
+      a.row_position === b.row_position
+        ? a.column_position - b.column_position
+        : a.row_position - b.row_position
+    );
+
+    const sortedBottles = [...bottles].sort((a, b) => {
+      const dateA = a.acquisition_date ? new Date(a.acquisition_date).getTime() : 0;
+      const dateB = b.acquisition_date ? new Date(b.acquisition_date).getTime() : 0;
+      return dateA - dateB;
+    });
+
+    const updates = sortedBottles
+      .map((bottle, index) => ({ id: bottle.id, position_id: sortedPositions[index]?.id || null }))
+      .filter(update => {
+        const currentBottle = bottles.find(b => b.id === update.id);
+        return currentBottle?.position_id !== update.position_id;
+      });
+
+    if (updates.length === 0) {
+      showNotification('Les bouteilles sont déjà positionnées de manière compacte', 'info');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('bottle')
+        .upsert(updates, { onConflict: 'id' });
+
+      if (error) throw error;
+
+      showNotification('Optimisation effectuée', 'success');
+      fetchPositionsAndBottles(selectedLocation.id, filters);
+    } catch (error: unknown) {
+      console.error('Erreur optimisation placement:', error);
+      showNotification(`Erreur: ${error instanceof Error ? error.message : 'Optimisation impossible'}`, 'error');
+    }
+  }, [bottles, fetchPositionsAndBottles, filters, positions, selectedLocation, showNotification]);
+
   useEffect(() => {
     if (!autoOptimizeEnabled || !selectedLocation || bottles.length === 0) return;
 
@@ -221,7 +267,7 @@ export default function StorageManagement() {
   // Gérer le clic sur une position
   const handlePositionClick = (position: Position) => {
     const bottle = bottles.find(b => b.position_id === position.id);
-    
+
     if (bottle) {
       setSelectedBottle(bottle);
       setDialogOpen(true);
@@ -231,7 +277,7 @@ export default function StorageManagement() {
       handleOpenQuickAddDialog();
     }
   };
-  
+
   // Ouvrir le dialogue d'ajout de bouteille
   const handleOpenQuickAddDialog = (position?: Position) => {
     if (!selectedLocation) {
@@ -365,52 +411,6 @@ export default function StorageManagement() {
       fetchPositionsAndBottles(location.id, filters);
     }
   };
-
-  // Optimisation du placement des bouteilles
-  const handleOptimizePlacement = useCallback(async () => {
-    if (!selectedLocation || bottles.length === 0) {
-      showNotification('Aucune bouteille à optimiser', 'info');
-      return;
-    }
-
-    const sortedPositions = [...positions].sort((a, b) =>
-      a.row_position === b.row_position
-        ? a.column_position - b.column_position
-        : a.row_position - b.row_position
-    );
-
-    const sortedBottles = [...bottles].sort((a, b) => {
-      const dateA = a.acquisition_date ? new Date(a.acquisition_date).getTime() : 0;
-      const dateB = b.acquisition_date ? new Date(b.acquisition_date).getTime() : 0;
-      return dateA - dateB;
-    });
-
-    const updates = sortedBottles
-      .map((bottle, index) => ({ id: bottle.id, position_id: sortedPositions[index]?.id || null }))
-      .filter(update => {
-        const currentBottle = bottles.find(b => b.id === update.id);
-        return currentBottle?.position_id !== update.position_id;
-      });
-
-    if (updates.length === 0) {
-      showNotification('Les bouteilles sont déjà positionnées de manière compacte', 'info');
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('bottle')
-        .upsert(updates, { onConflict: 'id' });
-
-      if (error) throw error;
-
-      showNotification('Optimisation effectuée', 'success');
-      fetchPositionsAndBottles(selectedLocation.id, filters);
-    } catch (error: unknown) {
-      console.error('Erreur optimisation placement:', error);
-      showNotification(`Erreur: ${error instanceof Error ? error.message : 'Optimisation impossible'}`, 'error');
-    }
-  }, [bottles, fetchPositionsAndBottles, filters, positions, selectedLocation, showNotification]);
 
   // Gestion de la recherche
   const handleSearch = () => {
