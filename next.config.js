@@ -7,6 +7,7 @@ const nextConfig = {
     ],
   },
   reactStrictMode: true,
+  output: 'standalone',
   // Forcer Next.js à recharger les pages pendant le développement
   onDemandEntries: {
     // période (en ms) où la page restera en mémoire
