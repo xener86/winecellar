@@ -355,9 +355,33 @@ export default function FoodPairingPage() {
     <>
       <Navbar />
       <Container maxWidth="lg" sx={{ mt: 6, mb: 8 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 6 }}>
-          <Typography variant="h4">Accords Mets & Vins</Typography>
-          <Button component={Link} href="/settings" variant="outlined">
+        <Box
+          sx={{
+            mb: 6,
+            p: { xs: 3, md: 4 },
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, rgba(112,26,67,0.08), rgba(255,255,255,0.2))',
+            border: 1,
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            alignItems: { md: 'center' },
+            justifyContent: 'space-between',
+            gap: 2
+          }}
+        >
+          <Box>
+            <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: 1 }}>
+              IA Sommelier
+            </Typography>
+            <Typography variant="h4" sx={{ fontWeight: 700, mt: 1 }}>
+              Accords Mets & Vins
+            </Typography>
+            <Typography variant="body1" sx={{ mt: 1, color: 'text.secondary', maxWidth: 640 }}>
+              L&apos;assistant intelligent commence par analyser vos recommandations de vins, puis croise vos bouteilles en cave et leurs emplacements pour proposer le meilleur accord disponible.
+            </Typography>
+          </Box>
+          <Button component={Link} href="/settings" variant="contained" color="secondary" sx={{ textTransform: 'none' }}>
             Configuration API
           </Button>
         </Box>

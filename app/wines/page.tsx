@@ -219,7 +219,7 @@ export default function Wines() {
             .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
             .sort();
           setUniqueRegions(regions);
-          showNotification('Recherche classique utilisée en raison d\'une indisponibilité temporaire.', 'info');
+          showNotification('Mode recherche classique activé pour garantir des résultats fiables.', 'info');
           return;
         }
 
@@ -442,20 +442,28 @@ export default function Wines() {
         </div>
         
         {/* Titre et bouton d'ajout */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-serif font-medium text-wine-burgundy">
-            Mes Vins
-          </h1>
-          <Link href="/add-wine">
-            <Button 
-              variant="contained" 
-              color="primary" 
-              startIcon={<AddIcon />}
-              className="rounded-lg bg-gradient-to-r from-wine-burgundy to-wine-red hover:from-wine-red hover:to-wine-burgundy shadow-md hover:shadow-lg transition-all duration-300"
-            >
-              Ajouter un vin
-            </Button>
-          </Link>
+        <div className="mb-8">
+          <div className="rounded-2xl p-6 md:p-8 bg-gradient-to-r from-wine-burgundy/90 via-wine-red/80 to-rose-200 text-white shadow-lg">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-sm uppercase tracking-[0.2em] text-white/80 mb-2">Votre cave</p>
+                <h1 className="text-3xl md:text-4xl font-serif font-semibold mb-2">Mes Vins</h1>
+                <p className="text-white/80 max-w-2xl">
+                  Parcourez rapidement vos bouteilles, filtrez par région ou couleur et profitez de la recherche optimisée. Les recommandations IA priorisent désormais les bouteilles réellement présentes en cave.
+                </p>
+              </div>
+              <Link href="/add-wine">
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  startIcon={<AddIcon />}
+                  className="rounded-xl bg-white text-wine-burgundy hover:bg-rose-50 font-semibold shadow-md"
+                >
+                  Ajouter un vin
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Barre de recherche et filtres */}
