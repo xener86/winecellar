@@ -103,39 +103,67 @@ export default function Wines() {
     setNotification(prev => ({ ...prev, open: false }));
   }, []);
 
+  const buildWineQuery = useCallback(
+    (term: string | null, includeAvailabilityOrder: boolean) => {
+      let query = supabase
+        .from('wine')
+        .select('*');
+
+      if (term) {
+        query = query.ilike('name', `%${term}%`);
+      }
+
+      if (filters.color) {
+        query = query.eq('color', filters.color);
+      }
+
+      if (filters.region) {
+        query = query.ilike('region', `%${filters.region}%`);
+      }
+
+      if (filters.priceRange) {
+        if (filters.priceRange === 'budget') query = query.lte('price', 15);
+        else if (filters.priceRange === 'medium') query = query.gte('price', 15).lte('price', 50);
+        else if (filters.priceRange === 'premium') query = query.gte('price', 50);
+      }
+
+      if (sortBy === 'name') query = query.order('name');
+      else if (sortBy === 'vintage') query = query.order('vintage', { ascending: false });
+      else if (sortBy === 'price') query = query.order('price', { ascending: false });
+
+      if (includeAvailabilityOrder && weightAvailability) {
+        query = query.order('availability_score', { ascending: false, nullsFirst: false });
+      }
+
+      return query;
+    },
+    [filters.color, filters.priceRange, filters.region, sortBy, weightAvailability]
+  );
+
   const fetchWineFallback = useCallback(async (term: string | null) => {
-    let query = supabase
-      .from('wine')
-      .select('*');
+    const shouldOrderByAvailability = weightAvailability;
 
-    if (term) {
-      query = query.ilike('name', `%${term}%`);
+    const runQuery = (includeAvailabilityOrder: boolean) =>
+      buildWineQuery(term, includeAvailabilityOrder);
+
+    let { data, error } = await runQuery(true);
+
+    if (error && shouldOrderByAvailability) {
+      const availabilityMissing =
+        error.code === '42703' ||
+        error.message?.toLowerCase().includes('availability_score');
+
+      if (availabilityMissing) {
+        ({ data, error } = await runQuery(false));
+
+        if (!error) {
+          showNotification('Tri par disponibilité indisponible, tri classique appliqué.', 'info');
+        }
+      }
     }
 
-    if (filters.color) {
-      query = query.eq('color', filters.color);
-    }
-
-    if (filters.region) {
-      query = query.ilike('region', `%${filters.region}%`);
-    }
-
-    if (filters.priceRange) {
-      if (filters.priceRange === 'budget') query = query.lte('price', 15);
-      else if (filters.priceRange === 'medium') query = query.gte('price', 15).lte('price', 50);
-      else if (filters.priceRange === 'premium') query = query.gte('price', 50);
-    }
-
-    if (sortBy === 'name') query = query.order('name');
-    else if (sortBy === 'vintage') query = query.order('vintage', { ascending: false });
-    else if (sortBy === 'price') query = query.order('price', { ascending: false });
-
-    if (weightAvailability) {
-      query = query.order('availability_score', { ascending: false, nullsFirst: false });
-    }
-
-    return query;
-  }, [filters.color, filters.priceRange, filters.region, sortBy, weightAvailability]);
+    return { data, error };
+  }, [buildWineQuery, showNotification, weightAvailability]);
 
   // Fonction de récupération des vins
   const fetchWines = useCallback(async (options?: { semantic?: boolean; overrideSearch?: string }) => {
@@ -171,22 +199,30 @@ export default function Wines() {
         ? await supabase.rpc('semantic_search_wines', { ...rpcParams, limit: 100 })
         : await supabase.rpc('search_wines', rpcParams);
 
-      if (error?.code === 'PGRST202') {
-        const { data: fallbackData, error: fallbackError } = await fetchWineFallback(term || null);
-        if (fallbackError) throw fallbackError;
-
-        setSemanticMode(false);
-        setWines((fallbackData as Wine[]) || []);
-        const regions = (fallbackData || [])
-          .filter((wine: Wine) => wine.region)
-          .map((wine: Wine) => wine.region as string)
-          .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
-          .sort();
-        setUniqueRegions(regions);
-        return;
-      }
-
+      // Si la fonction RPC n'est pas disponible ou renvoie une erreur, on bascule sur une requête directe
       if (error) {
+        const fallbackNeeded =
+          error.code === 'PGRST202' || // Fonction RPC introuvable
+          error.code === 'PGRST204' ||
+          error.code === '404' ||
+          error.code === '400';
+
+        if (fallbackNeeded) {
+          const { data: fallbackData, error: fallbackError } = await fetchWineFallback(term || null);
+          if (fallbackError) throw fallbackError;
+
+          setSemanticMode(false);
+          setWines((fallbackData as Wine[]) || []);
+          const regions = (fallbackData || [])
+            .filter((wine: Wine) => wine.region)
+            .map((wine: Wine) => wine.region as string)
+            .filter((region: string, index: number, self: string[]) => self.indexOf(region) === index)
+            .sort();
+          setUniqueRegions(regions);
+          showNotification('Recherche classique utilisée en raison d\'une indisponibilité temporaire.', 'info');
+          return;
+        }
+
         throw error;
       }
 
